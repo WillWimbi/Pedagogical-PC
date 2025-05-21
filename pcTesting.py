@@ -26,7 +26,7 @@ def bitAdd32(a, b, c_in):
 def bitSub32(a, b):
     # Two's complement subtraction: a - b = a + (~b + 1)
     nb = [not b[i] for i in range(BIT_SIZE)]
-    s, cout = bitAdd(a, nb, True)
+    s, cout = bitAdd32(a, nb, True)
     return s, cout
 
 #32bit multiplier
@@ -37,7 +37,7 @@ def bitMul32(a, b):
 
 #32bit divider
 def bitDiv32(a, b):
-    
+
 
 
 
@@ -50,7 +50,15 @@ def bitFPMul32(a, b):
 def bitFPDiv32(a, b):
 
 # #32bit shifter
-def 32bitShifter():
+def bitShifter32():
+
+def bitAND32(a, b):
+
+def bitOR32(a, b):
+
+def bitXOR32(a, b):
+
+def bitNOT32(a):
 
 
 

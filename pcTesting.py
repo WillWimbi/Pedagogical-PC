@@ -561,7 +561,7 @@ def bitAdd5(a, b, c_in):
  * a clean 2-row array ready for the final carry-propagate adder.
  */
 
-
+ 
 
 """
 

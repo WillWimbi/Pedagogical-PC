@@ -140,6 +140,8 @@ def bitMul32(a, b):
 # # #32bit divider
 # def bitDiv32(a, b):
 
+
+
 def bitAdd16(a, b, c_in):
     s = [False] * 16
     c = [False] * (16+1)
@@ -160,13 +162,408 @@ def bitAdd5(a, b, c_in):
 
 # def bitFPSub32(a, b):
 
-fpa = [False,False,False,False,True,True,True,False,False,False,False,False,False,True,True,True] 
-#0 is sign bit, 00011 (exponnent), #(implicit 1 is added here)11000000111 is mantissa.
-#this value is 1.1000000111 * 2^3 = 12.0546875...
-fpb = [False,True,False,True,True,True,True,False,True,False,False,False,False,True,False,True]
-#0 is sign bit, 10111 (exponent), #(implicit 1 is added here)1010000101 is mantissa. 
-#this value is 1.1010000101 * 2^8 = 417.25
-#output should be ~4900-5000
+
+"""/****************************************************************************
+ * DADDA REDUCTION ANALYSIS FOR 11-BIT MULTIPLIER
+ *
+ * Initial dot counts per column (partial products):
+ * col  0:  1 dot   (weight 2^0)  – a[0]×b[0]
+ * col  1:  2 dots  (weight 2^1)  – a[1]×b[0], a[0]×b[1]
+ * col  2:  3 dots  (weight 2^2)  – a[2]×b[0], a[1]×b[1], a[0]×b[2]
+ * col  3:  4 dots  (weight 2^3)  – a[3]×b[0], a[2]×b[1], a[1]×b[2], a[0]×b[3]
+ * col  4:  5 dots  (weight 2^4)  – a[4]×b[0], a[3]×b[1], a[2]×b[2], a[1]×b[3], a[0]×b[4]
+ * col  5:  6 dots  (weight 2^5)  – a[5]×b[0], a[4]×b[1], a[3]×b[2], a[2]×b[3], a[1]×b[4], a[0]×b[5]
+ * col  6:  7 dots  (weight 2^6)  – a[6]×b[0], a[5]×b[1], a[4]×b[2], a[3]×b[3], a[2]×b[4], a[1]×b[5], a[0]×b[6]
+ * col  7:  8 dots  (weight 2^7)  – a[7]×b[0], a[6]×b[1], a[5]×b[2], a[4]×b[3], a[3]×b[4], a[2]×b[5], a[1]×b[6], a[0]×b[7]
+ * col  8:  9 dots  (weight 2^8)  – a[8]×b[0], a[7]×b[1], a[6]×b[2], a[5]×b[3], a[4]×b[4], a[3]×b[5], a[2]×b[6], a[1]×b[7], a[0]×b[8]
+ * col  9: 10 dots  (weight 2^9)  – a[9]×b[0], a[8]×b[1], a[7]×b[2], a[6]×b[3], a[5]×b[4], a[4]×b[5], a[3]×b[6], a[2]×b[7], a[1]×b[8], a[0]×b[9]
+ * col 10: 11 dots  (weight 2^10) – a[10]×b[0], a[9]×b[1], a[8]×b[2], a[7]×b[3], a[6]×b[4], a[5]×b[5], a[4]×b[6], a[3]×b[7], a[2]×b[8], a[1]×b[9], a[0]×b[10]
+ * col 11: 10 dots  (weight 2^11) – a[10]×b[1], a[9]×b[2], a[8]×b[3], a[7]×b[4], a[6]×b[5], a[5]×b[6], a[4]×b[7], a[3]×b[8], a[2]×b[9], a[1]×b[10]
+ * col 12:  9 dots  (weight 2^12) – a[10]×b[2], a[9]×b[3], a[8]×b[4], a[7]×b[5], a[6]×b[6], a[5]×b[7], a[4]×b[8], a[3]×b[9], a[2]×b[10]
+ * col 13:  8 dots  (weight 2^13) – a[10]×b[3], a[9]×b[4], a[8]×b[5], a[7]×b[6], a[6]×b[7], a[5]×b[8], a[4]×b[9], a[3]×b[10]
+ * col 14:  7 dots  (weight 2^14) – a[10]×b[4], a[9]×b[5], a[8]×b[6], a[7]×b[7], a[6]×b[8], a[5]×b[9], a[4]×b[10]
+ * col 15:  6 dots  (weight 2^15) – a[10]×b[5], a[9]×b[6], a[8]×b[7], a[7]×b[8], a[6]×b[9], a[5]×b[10]
+ * col 16:  5 dots  (weight 2^16) – a[10]×b[6], a[9]×b[7], a[8]×b[8], a[7]×b[9], a[6]×b[10]
+ * col 17:  4 dots  (weight 2^17) – a[10]×b[7], a[9]×b[8], a[8]×b[9], a[7]×b[10]
+ * col 18:  3 dots  (weight 2^18) – a[10]×b[8], a[9]×b[9], a[8]×b[10]
+ * col 19:  2 dots  (weight 2^19) – a[10]×b[9], a[9]×b[10]
+ * col 20:  1 dot   (weight 2^20) – a[10]×b[10]
+ *
+ * SEQUENCE REDUCTION: 2, 3, 4, 6, 9, 13, 19, 28, 42…
+ *
+ * DADDA REDUCTION STAGES:
+ *   Stage 1: 11 → 9 dots
+ *   Stage 2:  9 → 6 dots
+ *   Stage 3:  6 → 4 dots
+ *   Stage 4:  4 → 3 dots
+ *   Stage 5:  3 → 2 dots (final)
+ ****************************************************************************/
+
+/*** STAGE 1: Reduction from 11 to 9 dots ***/
+/*
+ * Columns 0-8: already ≤ 9 dots – no reduction.
+ *
+ * Column 9 : 10 dots → 9 (1 HA)
+ *            – take 2 dots, return 1 sum in col 9, send 1 carry to col 10.
+ *
+ * Column 10: 11 dots + 1 carry = 12 → 9
+ *            – 1 FA: 12 → 10, carry → col 11
+ *            – 1 HA: 10 → 9,  carry → col 11
+ *
+ * Column 11: 10 dots + 2 carries = 12 → 9
+ *            – 1 FA: 12 → 10, carry → col 12
+ *            – 1 HA: 10 → 9,  carry → col 12
+ *
+ * Column 12:  9 dots + 2 carries = 11 → 9
+ *            – 1 FA: 11 → 9,  carry → col 13
+ *
+ * Column 13 reaches 9 dots after the incoming carry – no action.
+ *
+ * Stage 1 summary:
+ *   Column 9 : 0 FA, 1 HA
+ *   Column 10: 1 FA, 1 HA
+ *   Column 11: 1 FA, 1 HA
+ *   Column 12: 1 FA, 0 HA
+ *   ----------------------
+ *   **Total Stage 1:** 3 FA, 3 HA
+ *
+
+ */
+
+/*** STAGE 2: Reduction from 9 to 6 dots ***/
+/*
+ * Column 0-5: Already ≤ 6 dots, no reduction needed
+ *
+ * Column 6: 7 dots → 6 dots (needs 1 HA)
+ *   - Take 2 dots and replace with 1 dot in column 6, add 1 carry to column 7
+ *   - Resulting column 6: 6 dots
+ *   - HA count: 1
+ *
+ * Column 7: 8 dots + 1 carry = 9 dots → 6 dots (needs 1 FA, 1 HA)
+ *   - FA: take 3 dots ⇒ 1 dot in col 7, 1 carry → col 8
+ *   - HA: take 2 dots ⇒ 1 dot in col 7, 1 carry → col 8
+ *   - Resulting column 7: 6 dots
+ *   - FA count: 1, HA count: 1
+ *
+ * Column 8: 9 dots + 2 carries = 11 dots → 6 dots (needs 2 FA, 1 HA)
+ *   - FA #1: 3 dots ⇒ 1 dot, 1 carry → col 9
+ *   - FA #2: 3 dots ⇒ 1 dot, 1 carry → col 9
+ *   - HA: 2 dots ⇒ 1 dot, 1 carry → col 9
+ *   - Resulting column 8: 6 dots
+ *   - FA count: 2, HA count: 1
+ *
+ * Column 9: 9 dots + 3 carries = 12 dots → 6 dots (needs 3 FA)
+ *   - 3 FAs (each: 3 dots ⇒ 1 dot, 1 carry → col 10)
+ *   - Resulting column 9: 6 dots
+ *   - FA count: 3
+ *
+ * Column 10: 9 dots + 3 carries = 12 dots → 6 dots (needs 3 FA)
+ *   - 3 FAs → 3 carries to column 11
+ *   - Resulting column 10: 6 dots
+ *   - FA count: 3
+ *
+ * Column 11: 9 dots + 3 carries = 12 dots → 6 dots (needs 3 FA)
+ *   - 3 FAs → 3 carries to column 12
+ *   - Resulting column 11: 6 dots
+ *   - FA count: 3
+ *
+ * Column 12: 9 dots + 3 carries = 12 dots → 6 dots (needs 3 FA)
+ *   - 3 FAs → 3 carries to column 13
+ *   - Resulting column 12: 6 dots
+ *   - FA count: 3
+ *
+ * Column 13: 9 dots + 3 carries = 12 dots → 6 dots (needs 3 FA)
+ *   - 3 FAs → 3 carries to column 14
+ *   - Resulting column 13: 6 dots
+ *   - FA count: 3
+ *
+ * Column 14: 7 dots + 3 carries = 10 dots → 6 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 15
+ *   - Resulting column 14: 6 dots
+ *   - FA count: 2
+ *
+ * Column 15: 6 dots + 2 carries = 8 dots → 6 dots (needs 1 FA)
+ *   - 1 FA → 1 carry to column 16
+ *   - Resulting column 15: 6 dots
+ *   - FA count: 1
+ *
+ * Column 16: 5 dots + 1 carry = 6 dots – already at target, no reduction
+ *
+ * Columns 17-20: ≤ 6 dots, no reduction
+ *
+ * Stage 2 summary:
+ *   FA: 21, HA: 3
+ */
+
+/*** STAGE 3: Reduction from 6 to 4 dots ***/
+/*
+ * Column 0-3: Already ≤ 4 dots, no reduction needed
+ *
+ * Column 4: 5 dots → 4 dots (needs 1 HA)
+ *   - HA: 2 dots ⇒ 1 dot in col 4, 1 carry → col 5
+ *   - Resulting column 4: 4 dots
+ *   - HA count: 1
+ *
+ * Column 5: 6 dots + 1 carry = 7 dots → 4 dots (needs 1 FA, 1 HA)
+ *   - FA: 3 dots ⇒ 1 dot, 1 carry → col 6
+ *   - HA: 2 dots ⇒ 1 dot, 1 carry → col 6
+ *   - Resulting column 5: 4 dots
+ *   - FA count: 1, HA count: 1
+ *
+ * Column 6: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - FA #1: 3 dots ⇒ 1 dot, 1 carry → col 7
+ *   - FA #2: 3 dots ⇒ 1 dot, 1 carry → col 7
+ *   - Resulting column 6: 4 dots
+ *   - FA count: 2
+ *
+ * Column 7: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 8
+ *   - Resulting column 7: 4 dots
+ *   - FA count: 2
+ *
+ * Column 8: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 9
+ *   - Resulting column 8: 4 dots
+ *   - FA count: 2
+ *
+ * Column 9: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 10
+ *   - Resulting column 9: 4 dots
+ *   - FA count: 2
+ *
+ * Column 10: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 11
+ *   - Resulting column 10: 4 dots
+ *   - FA count: 2
+ *
+ * Column 11: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 12
+ *   - Resulting column 11: 4 dots
+ *   - FA count: 2
+ *
+ * Column 12: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 13
+ *   - Resulting column 12: 4 dots
+ *   - FA count: 2
+ *
+ * Column 13: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 14
+ *   - Resulting column 13: 4 dots
+ *   - FA count: 2
+ *
+ * Column 14: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 15
+ *   - Resulting column 14: 4 dots
+ *   - FA count: 2
+ *
+ * Column 15: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 16
+ *   - Resulting column 15: 4 dots
+ *   - FA count: 2
+ *
+ * Column 16: 6 dots + 2 carries = 8 dots → 4 dots (needs 2 FA)
+ *   - 2 FAs → 2 carries to column 17
+ *   - Resulting column 16: 4 dots
+ *   - FA count: 2
+ *
+ * Column 17: 4 dots + 2 carries = 6 dots → 4 dots (needs 1 FA)
+ *   - FA: 3 dots ⇒ 1 dot, 1 carry → col 18
+ *   - Resulting column 17: 4 dots
+ *   - FA count: 1
+ *
+ * Column 18: 3 dots + 1 carry = 4 dots – already at target, no reduction
+ *
+ * Columns 19-20: ≤ 4 dots, no reduction
+ *
+ * Stage 3 summary:
+ *   FA: 24, HA: 2
+ */
+
+ /*** STAGE 4: Reduction from 4 to 3 dots ***/
+/*
+ * Target height = 3.  
+ * Strategy:  
+ *   • If a column has **4 dots** → use **1 HA** (net –1 dot, +1 carry).  
+ *   • If a column has **≥5 dots** → use **1 FA** (pick 3 dots → 1 sum, +1 carry; net –2 dots)  
+ *     until the height falls to 3, then finish with 1 HA if still 4.
+ *
+ * Columns 0-2: already ≤ 3 dots — no action.
+ *
+ * Column 3: 4 dots → 3 dots (1 HA)
+ *   – HA: 2 dots ⇒ 1 sum in col 3, 1 carry → col 4
+ *   – Result col 3: 3 dots
+ *   – HA count: 1
+ *
+ * Column 4: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA: 3 dots ⇒ 1 sum in col 4, 1 carry → col 5
+ *   – Result col 4: 3 dots
+ *   – FA count: 1
+ *
+ * Column 5: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 6
+ *   – Result col 5: 3 dots
+ *   – FA count: 1
+ *
+ * Column 6: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 7
+ *   – Result col 6: 3 dots
+ *
+ * Column 7: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 8
+ *   – Result col 7: 3 dots
+ *
+ * Column 8: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 9
+ *   – Result col 8: 3 dots
+ *
+ * Column 9: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 10
+ *   – Result col 9: 3 dots
+ *
+ * Column 10: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 11
+ *   – Result col 10: 3 dots
+ *
+ * Column 11: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 12
+ *   – Result col 11: 3 dots
+ *
+ * Column 12: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 13
+ *   – Result col 12: 3 dots
+ *
+ * Column 13: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 14
+ *   – Result col 13: 3 dots
+ *
+ * Column 14: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 15
+ *   – Result col 14: 3 dots
+ *
+ * Column 15: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 16
+ *   – Result col 15: 3 dots
+ *
+ * Column 16: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 17
+ *   – Result col 16: 3 dots
+ *
+ * Column 17: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 18
+ *   – Result col 17: 3 dots
+ *
+ * Column 18: 4 dots + 1 carry = 5 → 3 (1 FA)
+ *   – FA → carry → col 19
+ *   – Result col 18: 3 dots
+ *
+ * Column 19: 2 dots + 1 carry = 3 dots — already at target, no action.
+ *
+ * Column 20: 1 dot — no action.
+ *
+ * Stage 4 summary (after all cascaded carries settle):
+ *   Column 3 : 0 FA, 1 HA
+ *   Columns 4-18: 1 FA each
+ *   -------------------------
+ *   **Total Stage 4:** 15 FA, 1 HA
+ *
+ *  (All columns are now ≤ 3 dots, ready for the final Stage 5 reduction
+ *   from 3 to 2 dots.)
+ */
+
+/*** STAGE 5:  Reduction from 3 dots → final 2-row array ***/
+/*
+ * Goal: every column ≤ 2 dots.
+ * Rule set
+ *   – 3 dots  → 1 FA  (3 → 1 dot, +1 carry)
+ *   – 4 dots  → 1 HA  (4 → 3) then 1 FA  (3 → 1), total +2 carries
+ *
+ * COLUMN-BY-COLUMN WORK
+ *
+ * Column 0: 1 dot                         – no action
+ *
+ * Column 1: 2 dots                        – no action
+ *
+ * Column 2: 3 dots → 2 dot                (1 HA)
+ *   • HA: 2 dots ⇒ 1 dot in col 2, 1 carry → col 3
+     → Result col 2: 2 dots, 1 carry → Result col 3
+ *
+ * Column 3: 3 dots + 1 carry = 4 dots     (1 HA, 1 FA)
+ *   • HA: 2 dots ⇒ 1 dot in col 3, 1 carry → col 4   (4 → 3)
+ *   • FA: 3 dots ⇒ 1 dot in col 3, 1 carry → col 4   (3 → 1)
+ *   → Result col 3: 1 dot, 2 carries → col 4
+ *
+ * Column 4: 3 dots + 2 carries = 5 dots   (2 FA)
+ *   • FA#1: 3 dots ⇒ 1 dot, 1 carry → col 5   (5 → 3)
+ *   • FA#2: 3 dots ⇒ 1 dot, 1 carry → col 5   (3 → 1)
+ *   → Result col 4: 1 dot, 2 carries → col 5
+ *
+ * Column 5: 3 dots + 2 carries = 5 dots   (2 FA)
+ *   • FA#1, FA#2  (identical to col 4)     → 2 carries → col 6
+ *   → Result col 5: 1 dot
+ *
+ * Column 6: 3 dots + 2 carries = 5 dots   (2 FA)  → 2 carries → col 7
+ *           Result col 6: 1 dot
+ *
+ * Column 7: 3 dots + 2 carries = 5 dots   (2 FA)  → 2 carries → col 8
+ *           Result col 7: 1 dot
+ *
+ * Column 8: 3 dots + 2 carries = 5 dots   (2 FA)  → 2 carries → col 9
+ *           Result col 8: 1 dot
+ *
+ * Column 9: 3 dots + 2 carries = 5 dots   (2 FA)  → 2 carries → col 10
+ *           Result col 9: 1 dot
+ *
+ * Column 10: 3 dots + 2 carries = 5 dots  (2 FA)  → 2 carries → col 11
+ *            Result col 10: 1 dot
+ *
+ * Column 11: 3 dots + 2 carries = 5 dots  (2 FA)  → 2 carries → col 12
+ *            Result col 11: 1 dot
+ *
+ * Column 12: 3 dots + 2 carries = 5 dots  (2 FA)  → 2 carries → col 13
+ *            Result col 12: 1 dot
+ *
+ * Column 13: 3 dots + 2 carries = 5 dots  (2 FA)  → 2 carries → col 14
+ *            Result col 13: 1 dot
+ *
+ * Column 14: 3 dots + 2 carries = 5 dots  (2 FA)  → 2 carries → col 15
+ *            Result col 14: 1 dot
+ *
+ * Column 15: 3 dots + 2 carries = 5 dots  (2 FA)  → 2 carries → col 16
+ *            Result col 15: 1 dot
+ *
+ * Column 16: 3 dots + 2 carries = 5 dots  (2 FA)  → 2 carries → col 17
+ *            Result col 16: 1 dot
+ *
+ * Column 17: 3 dots + 2 carries = 5 dots  (2 FA)  → 2 carries → col 18
+ *            Result col 17: 1 dot
+ *
+ * Column 18: 3 dots + 2 carries = 5 dots  (2 FA)  → 2 carries → col 19
+ *            Result col 18: 1 dot
+ *
+ * Column 19: 3 dots + 2 carries = 5 dots  (2 FA)  → 2 carries → col 20
+ *            Result col 19: 1 dot
+ *
+ * Column 20: 1 dot + 2 carries = 3 dots   (1 FA)
+ *   • FA: 3 dots ⇒ 1 dot in col 20, 1 carry → col 21
+ *   → Result col 20: 1 dot
+ *
+ * Column 21 (new): 0 dots + 1 carry = 1 dot – no action
+ *
+ * Stage 5 summary:
+ *   Column 2 : 1 HA
+ *   Column 3 : 1 HA, 1 FA
+ *   Columns 4-19 : 2 FA each  (16 columns × 2 = 32 FA)
+ *   Column 20 : 1 FA
+ *   --------------------------------------
+ *   **Total Stage 5:** 34 FA, 2 HA
+ *
+ * After Stage 5 every column ≤ 2 dots.  The partial-product matrix is now
+ * a clean 2-row array ready for the final carry-propagate adder.
+ */
+
+
+
+"""
 
 def bitMul11(a, b):
     
@@ -208,6 +605,15 @@ def bitMul11(a, b):
 
     elif(phase==9):#0/256 --> 
 
+fpa = [False,False,False,False,True,True,True,False,False,False,False,False,False,True,True,True] 
+#0 is sign bit, 00011 (exponnent), #(implicit 1 is added here)11000000111 is mantissa.
+#this value is 1.1000000111 * 2^3 = 12.0546875...
+fpb = [False,True,False,True,True,True,True,False,True,False,False,False,False,True,False,True]
+#0 is sign bit, 10111 (exponent), #(implicit 1 is added here)1010000101 is mantissa. 
+#this value is 1.1010000101 * 2^8 = 417.25
+#1 + (1/2³ + 1/2⁴ + 1/2⁵ + 1/2⁷ + 1/2¹⁰) = 1.2275390625 --> fractional value is 0.2275390625 + implicit 1.0
+#the value is 5029.81835938, the output should be ~5028.0 --> exponent:11011, mantissa:1.0011101001
+
 def bitFPMul16(a, b):
     #a and b are 16bit floats
     partialProducts = [[False for _ in range(10)] for _ in range(10)]
@@ -218,7 +624,7 @@ def bitFPMul16(a, b):
     outB = bitAdd5(interimA,interimB,False)
 
     #multiply the 10bit mantissas (actually 11bit via implicit 1s) to get 22bit product
-
+    bit22Mantissa = bitMul11(a[5:],b[5:])
 
     return outB
     #specific 

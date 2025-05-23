@@ -654,33 +654,11 @@ apply Final Ripple Carry Adder to output --> 22bit output product.
 
 
 
-# fpa represents 12.0546875
-fpa = [
-    False,                   # sign bit = 0 → positive
-    True, False, False,     # exponent bits [1,0,0]
-    True, False,              #             [1,0] → unbiased exponent = 18 - bias = 3
-    # implicit leading-1 + mantissa bits:
-    True, False, False, False, False, False, False, True, True, True
-    # mantissa (binary): 1.1000000111
-]
-# this value = 1.1000000111 (binary) × 2³ = 1.53125 × 8 = 12.0546875
-
-
-# fpb represents 417.25
-fpb = [
-    False,                   # sign bit = 0 → positive
-    True, False, True, True, True,
-    # exponent bits [1,0,1,1,1] → unbiased exponent = 23 − bias=8
-    # implicit leading-1 + mantissa bits:
-    True, False, True, False, False, False, False, True, False, True
-    # mantissa (binary): 1.1010000101
-]
-# this value = 1.1010000101 (binary) × 2⁸ = 1.6298828125 × 256 = 417.25
 
 def bitMul11(a,b):
-    partialProducts = [[a[j] & b[i] for j in range(11)] for i in range(11)]
+    partialProducts = [[a[i] & b[j] for j in range(11)] for i in range(11)]
     sum2Column = [[False, False] for _ in range(22)]
-    
+    print(partialProducts)
     #column 0
     sum2Column[0][0] = partialProducts[0][0]
 
@@ -824,7 +802,7 @@ def bitMul11(a,b):
     sum_11_5, cout_11_5 = FA(carry_10_5, carry_10_6, carry_10_7)
     sum_11_6, cout_11_6 = FA(carry_10_8, sum_11_2, sum_11_3)
     sum_11_7, cout_11_7 = FA(sum_11_0, sum_11_1, sum_11_4)
-    sum_11_8, cout_11_8 = FA(sum_11_5, sum_11_6, sum_11_7)
+    sum_11_8, cout_11_8 = HA(sum_11_5, sum_11_6)
     sum2Column[11][0] = sum_11_8
     sum2Column[11][1] = sum_11_7
     carry_11_0 = cout_11_0
@@ -843,11 +821,11 @@ def bitMul11(a,b):
     sum_12_2, cout_12_2 = FA(partialProducts[4][8], partialProducts[8][4], carry_11_2)
     sum_12_3, cout_12_3 = FA(partialProducts[5][7], partialProducts[7][5], carry_11_3)
     sum_12_4, cout_12_4 = FA(partialProducts[6][6], sum_12_0, carry_11_4)
-    sum_12_5, cout_12_5 = FA(sum_12_1, sum_12_2, carry_11_5)
-    sum_12_6, cout_12_6 = FA(sum_12_3, sum_12_4, carry_11_6)
-    sum_12_7, cout_12_7 = FA(sum_12_5, sum_12_6, carry_11_7)
-    sum2Column[12][0] = sum_12_7
-    sum2Column[12][1] = cout_12_7 if carry_11_8 else sum_12_6
+    sum_12_5, cout_12_5 = FA(carry_11_5, carry_11_6, carry_11_7)
+    sum_12_6, cout_12_6 = FA(carry_11_8, sum_12_1, sum_12_2)
+    sum_12_7, cout_12_7 = FA(sum_12_3, sum_12_4, sum_12_5)
+    sum2Column[12][0] = sum_12_6
+    sum2Column[12][1] = sum_12_7
     carry_12_0 = cout_12_0
     carry_12_1 = cout_12_1
     carry_12_2 = cout_12_2
@@ -855,7 +833,7 @@ def bitMul11(a,b):
     carry_12_4 = cout_12_4
     carry_12_5 = cout_12_5
     carry_12_6 = cout_12_6
-    carry_12_7 = cout_12_7 or carry_11_8
+    carry_12_7 = cout_12_7
 
     #column 13 - 7 FA, 0 HA (8 initial dots + carries)
     sum_13_0, cout_13_0 = FA(partialProducts[3][10], partialProducts[10][3], carry_12_0)
@@ -864,16 +842,16 @@ def bitMul11(a,b):
     sum_13_3, cout_13_3 = FA(partialProducts[6][7], partialProducts[7][6], carry_12_3)
     sum_13_4, cout_13_4 = FA(sum_13_0, sum_13_1, carry_12_4)
     sum_13_5, cout_13_5 = FA(sum_13_2, sum_13_3, carry_12_5)
-    sum_13_6, cout_13_6 = FA(sum_13_4, sum_13_5, carry_12_6)
-    sum2Column[13][0] = sum_13_6
-    sum2Column[13][1] = cout_13_6 if carry_12_7 else sum_13_5
+    sum_13_6, cout_13_6 = FA(sum_13_4, carry_12_7, carry_12_6)
+    sum2Column[13][0] = sum_13_5
+    sum2Column[13][1] = sum_13_6 
     carry_13_0 = cout_13_0
     carry_13_1 = cout_13_1
     carry_13_2 = cout_13_2
     carry_13_3 = cout_13_3
     carry_13_4 = cout_13_4
     carry_13_5 = cout_13_5
-    carry_13_6 = cout_13_6 or carry_12_7
+    carry_13_6 = cout_13_6
 
     #column 14 - 6 FA, 0 HA (7 initial dots + carries)
     sum_14_0, cout_14_0 = FA(partialProducts[4][10], partialProducts[10][4], carry_13_0)
@@ -881,65 +859,65 @@ def bitMul11(a,b):
     sum_14_2, cout_14_2 = FA(partialProducts[6][8], partialProducts[8][6], carry_13_2)
     sum_14_3, cout_14_3 = FA(partialProducts[7][7], sum_14_0, carry_13_3)
     sum_14_4, cout_14_4 = FA(sum_14_1, sum_14_2, carry_13_4)
-    sum_14_5, cout_14_5 = FA(sum_14_3, sum_14_4, carry_13_5)
-    sum2Column[14][0] = sum_14_5
-    sum2Column[14][1] = cout_14_5 if carry_13_6 else sum_14_4
+    sum_14_5, cout_14_5 = FA(sum_14_3, carry_13_5, carry_13_6)
+    sum2Column[14][0] = sum_14_4
+    sum2Column[14][1] = sum_14_5 
     carry_14_0 = cout_14_0
     carry_14_1 = cout_14_1
     carry_14_2 = cout_14_2
     carry_14_3 = cout_14_3
     carry_14_4 = cout_14_4
-    carry_14_5 = cout_14_5 or carry_13_6
+    carry_14_5 = cout_14_5
 
     #column 15 - 5 FA, 0 HA (6 initial dots + carries)
     sum_15_0, cout_15_0 = FA(partialProducts[5][10], partialProducts[10][5], carry_14_0)
     sum_15_1, cout_15_1 = FA(partialProducts[6][9], partialProducts[9][6], carry_14_1)
     sum_15_2, cout_15_2 = FA(partialProducts[7][8], partialProducts[8][7], carry_14_2)
     sum_15_3, cout_15_3 = FA(sum_15_0, sum_15_1, carry_14_3)
-    sum_15_4, cout_15_4 = FA(sum_15_2, sum_15_3, carry_14_4)
-    sum2Column[15][0] = sum_15_4
-    sum2Column[15][1] = cout_15_4 if carry_14_5 else sum_15_3
+    sum_15_4, cout_15_4 = FA(sum_15_2, carry_14_4, carry_14_5)
+    sum2Column[15][0] = sum_15_3
+    sum2Column[15][1] = sum_15_4
     carry_15_0 = cout_15_0
     carry_15_1 = cout_15_1
     carry_15_2 = cout_15_2
     carry_15_3 = cout_15_3
-    carry_15_4 = cout_15_4 or carry_14_5
+    carry_15_4 = cout_15_4
 
     #column 16 - 4 FA, 0 HA (5 initial dots + carries)
     sum_16_0, cout_16_0 = FA(partialProducts[6][10], partialProducts[10][6], carry_15_0)
     sum_16_1, cout_16_1 = FA(partialProducts[7][9], partialProducts[9][7], carry_15_1)
     sum_16_2, cout_16_2 = FA(partialProducts[8][8], sum_16_0, carry_15_2)
-    sum_16_3, cout_16_3 = FA(sum_16_1, sum_16_2, carry_15_3)
-    sum2Column[16][0] = sum_16_3
-    sum2Column[16][1] = cout_16_3 if carry_15_4 else sum_16_2
+    sum_16_3, cout_16_3 = FA(sum_16_1, carry_15_4, carry_15_3)
+    sum2Column[16][0] = sum_16_2
+    sum2Column[16][1] = sum_16_3
     carry_16_0 = cout_16_0
     carry_16_1 = cout_16_1
     carry_16_2 = cout_16_2
-    carry_16_3 = cout_16_3 or carry_15_4
+    carry_16_3 = cout_16_3
 
     #column 17 - 3 FA, 0 HA (4 initial dots + carries)
     sum_17_0, cout_17_0 = FA(partialProducts[7][10], partialProducts[10][7], carry_16_0)
     sum_17_1, cout_17_1 = FA(partialProducts[8][9], partialProducts[9][8], carry_16_1)
-    sum_17_2, cout_17_2 = FA(sum_17_0, sum_17_1, carry_16_2)
-    sum2Column[17][0] = sum_17_2
-    sum2Column[17][1] = cout_17_2 if carry_16_3 else sum_17_1
+    sum_17_2, cout_17_2 = FA(sum_17_0, carry_16_3, carry_16_2)
+    sum2Column[17][0] = sum_17_1
+    sum2Column[17][1] = sum_17_2
     carry_17_0 = cout_17_0
     carry_17_1 = cout_17_1
-    carry_17_2 = cout_17_2 or carry_16_3
+    carry_17_2 = cout_17_2
 
     #column 18 - 2 FA, 0 HA (3 initial dots + carries)
     sum_18_0, cout_18_0 = FA(partialProducts[8][10], partialProducts[10][8], carry_17_0)
-    sum_18_1, cout_18_1 = FA(partialProducts[9][9], sum_18_0, carry_17_1)
-    sum2Column[18][0] = sum_18_1
-    sum2Column[18][1] = cout_18_1 if carry_17_2 else sum_18_0
+    sum_18_1, cout_18_1 = FA(partialProducts[9][9], carry_17_2, carry_17_1)
+    sum2Column[18][0] = sum_18_0
+    sum2Column[18][1] = sum_18_1
     carry_18_0 = cout_18_0
-    carry_18_1 = cout_18_1 or carry_17_2
+    carry_18_1 = cout_18_1
 
     #column 19 - 1 FA, 0 HA (2 initial dots + carries)
     sum_19_0, cout_19_0 = FA(partialProducts[9][10], partialProducts[10][9], carry_18_0)
     sum2Column[19][0] = sum_19_0
-    sum2Column[19][1] = cout_19_0 if carry_18_1 else carry_18_1
-    carry_19_0 = cout_19_0 or carry_18_1
+    sum2Column[19][1] = carry_18_1
+    carry_19_0 = cout_19_0
 
     #column 20 - 0 FA, 0 HA (1 initial dot + carry)
     sum2Column[20][0] = partialProducts[10][10]
@@ -963,18 +941,28 @@ def bitMul11(a,b):
     return product
 
 def bitFPMul16(a, b):
+    signBit = a[15] ^ b[15]
     #a and b are 16bit floats
-    partialProducts = [[False for _ in range(10)] for _ in range(10)]
     #negate. We use -15? [True,False,False,False,True] (msb is last array index)
     bitNeg15 = [True,False,False,False,True]
-    interimA = bitAdd5(a,bitNeg15,True)
-    interimB = bitAdd5(b,bitNeg15,True)
-    outB = bitAdd5(interimA,interimB,False)
+    bitPos15 = [False,True,True,True,True]
+    print(f"a: {a}")
+    print(f"b: {b}")
+    print(f"bitNeg15: {bitNeg15}")
+    print(f"bitPos15: {bitPos15}")
+    interimA, carry_out1 = bitAdd5(a[10:15],b[10:15],True)#subtract 15 from a --> unbiased exponent
+    outExp, carry_out2 = bitAdd5(interimA,bitNeg15,True)#subtract 15 from b --> unbiased exponent
+    print(f"interimA: {interimA}")
+    print(f"outExp after subtracting 15: {outExp}")
+    
+    # outExp, carry_outexp2 = bitAdd5(outExp,bitPos15,False)#add 15 to bias the exponent
+
 
     #multiply the 10bit mantissas (actually 11bit via implicit 1s) to get 22bit product
     bit22Mantissa = bitMul11(a[5:],b[5:])
-
-    return outB
+    out = bit22Mantissa[11:21]+outExp+ [signBit]  
+    
+    return out
     #specific 
     #multiplication
 
@@ -1049,16 +1037,69 @@ def testTwoNums():
     # 11-bit value: alternating False/True
     # multt1 = [False]*3 + [True]*6 + [False]*2 #504
     # multt2 = [False]*3 + [True]*6 + [False]*2 #504
-    multt1 = [False]*3 + [True]*4 + [False]*4 #8+16+32+64
+    multt1 = [False]*3 + [True]*4 + [False]*4 #8+16+32+64=120
     multt2 = [False]*5 + [True]*1 + [False]*5 #32
+
+    multt3 = [False]*6 + [True]*4 + [False]*1 #64+128+256+512=960
+    multt4 = [False]*6 + [True]*1 + [False]*4 #64
+    #960*64=61440
     print(f"multt1 (decimal): {convertToDecimalOnlyPositiveUnsigned(convert_bool_to_binary(multt1))}")
     print(f"multt2 (decimal): {convertToDecimalOnlyPositiveUnsigned(convert_bool_to_binary(multt2))}")
-    #calculate
+    #calculate2
     result_mult = bitMul11(multt1, multt2)
     print(f"result_mult: {result_mult}")
     print(f"Binary product: {convertToDecimalOnlyPositiveUnsigned(convert_bool_to_binary(result_mult))}")
     print(f"bool to binary: {convert_bool_to_binary(result_mult)}")
     print(f"Human readable product: {convertToString(reverseArray(convert_bool_to_binary(result_mult)))}")
+    
+    result_mult2 = bitMul11(multt3, multt4)
+    print(f"result_mult2: {result_mult2}")
+    print(f"Binary product: {convertToDecimalOnlyPositiveUnsigned(convert_bool_to_binary(result_mult2))}")
+    print(f"bool to binary: {convert_bool_to_binary(result_mult2)}")
+    print(f"Human readable product: {convertToString(reverseArray(convert_bool_to_binary(result_mult2)))}")
+    
+    #floatingpoint
+    # fpa represents 12.0546875
+    fpa = [
+        False,                   # sign bit = 0 → positive
+        True, False, False,     # exponent bits [1,0,0]
+        True, False,              #             [1,0] → unbiased exponent = 18 - bias = 3
+        # implicit leading-1 + mantissa bits:
+        True, False, False, False, False, False, False, True, True, True
+        # mantissa (binary): 1.1000000111
+    ]
+    # this value = 1.1000000111 (binary) × 2³ = 1.53125 × 8 = 12.0546875
+
+
+    # fpb represents 417.25
+    fpb = [
+        False,                   # sign bit = 0 → positive
+        True, False, True, True, True,
+        # exponent bits [1,0,1,1,1] → unbiased exponent = 23 − bias=8
+        # implicit leading-1 + mantissa bits:
+        True, False, True, False, False, False, False, True, False, True
+        # mantissa (binary): 1.1010000101
+    ]
+    # this value = 1.1010000101 (binary) × 2⁸ = 1.6298828125 × 256 = 417.25
+    #'temporarily changing it to be smaller:
+    #fpc represents...
+    fpc = [
+        False,                    # sign bit = 0 → positive
+        False, True, False, True, False,
+        # exponent bits [0,1,0,1,0] → biased exponent = 10 → unbiased = -5
+        # implicit leading-1 + mantissa bits:
+        True, True, False, True, False, True, False, False, False, False
+        # mantissa (binary): 1.1010100000
+    ]
+    # this value = 1.1010100000 (binary) × 2^-5 = 1.65625 × 0.03125 = 0.05175781...
+        
+    result_fp = bitFPMul16(fpa, fpc)
+    print(f"result_fp: {result_fp}")
+    #print(f"Binary product: {convertToFloatingPoint(convert_bool_to_binary(result_fp))}")
+    print(f"bool to binary: {convert_bool_to_binary(result_fp)}")
+    print(f"Human readable product: {convertToString(reverseArray(convert_bool_to_binary(result_fp)))}")
+
+
     #32-bit value: alternating False/True
     subtract1 = [True]*32 #-1
     subtract2 = [True]*1+[False]*28+[True]*3 #1

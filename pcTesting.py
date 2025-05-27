@@ -145,12 +145,665 @@ def bitMul32(a, b):
         a.append(f)
         b.append(g)
 
+def bitMul16Unsigned(a,b):
+    partialProducts = [[a[i] & b[j] for j in range(16)] for i in range(16)]
+    sum2Column = [[False, False] for _ in range(32)]
+    
+    #column 0 - 1 dot
+    sum2Column[0][0] = partialProducts[0][0]
+    
+    #column 1 - 2 dots
+    sum2Column[1][0] = partialProducts[0][1]
+    sum2Column[1][1] = partialProducts[1][0]
+    
+    #column 2 - 3 dots → 2 dots (1 HA)
+    sum_2_0, cout_2_0 = HA(partialProducts[0][2], partialProducts[1][1])
+    sum2Column[2][0] = sum_2_0
+    sum2Column[2][1] = partialProducts[2][0]
+    carry_2_0 = cout_2_0
+    
+    #column 3 - 4 dots + 1 carry = 5 → 2 dots (1 FA, 1 HA)
+    sum_3_0, cout_3_0 = HA(partialProducts[0][3], partialProducts[3][0])
+    sum_3_1, cout_3_1 = FA(partialProducts[1][2], partialProducts[2][1], carry_2_0)
+    sum2Column[3][0] = sum_3_0
+    sum2Column[3][1] = sum_3_1
+    carry_3_0 = cout_3_0
+    carry_3_1 = cout_3_1
+    
+    #column 4 - 5 dots + 2 carries = 7 → 2 dots (2 FA, 1 HA)
+    sum_4_0, cout_4_0 = HA(partialProducts[0][4], partialProducts[4][0])
+    sum_4_1, cout_4_1 = FA(partialProducts[1][3], partialProducts[3][1], carry_3_0)
+    sum_4_2, cout_4_2 = FA(partialProducts[2][2], sum_4_0, carry_3_1)
+    sum2Column[4][0] = sum_4_1
+    sum2Column[4][1] = sum_4_2
+    carry_4_0 = cout_4_0
+    carry_4_1 = cout_4_1
+    carry_4_2 = cout_4_2
+    
+    #column 5 - 6 dots + 3 carries = 9 → 2 dots (3 FA, 1 HA)
+    sum_5_0, cout_5_0 = HA(partialProducts[0][5], partialProducts[5][0])
+    sum_5_1, cout_5_1 = FA(partialProducts[1][4], partialProducts[4][1], carry_4_0)
+    sum_5_2, cout_5_2 = FA(partialProducts[2][3], partialProducts[3][2], carry_4_1)
+    sum_5_3, cout_5_3 = FA(sum_5_0, sum_5_1, carry_4_2)
+    sum2Column[5][0] = sum_5_2
+    sum2Column[5][1] = sum_5_3
+    carry_5_0 = cout_5_0
+    carry_5_1 = cout_5_1
+    carry_5_2 = cout_5_2
+    carry_5_3 = cout_5_3
+    
+    #column 6 - 7 dots + 4 carries = 11 → 2 dots (4 FA, 1 HA)
+    sum_6_0, cout_6_0 = HA(partialProducts[0][6], partialProducts[6][0])
+    sum_6_1, cout_6_1 = FA(partialProducts[1][5], partialProducts[5][1], carry_5_0)
+    sum_6_2, cout_6_2 = FA(partialProducts[2][4], partialProducts[4][2], carry_5_1)
+    sum_6_3, cout_6_3 = FA(partialProducts[3][3], sum_6_0, carry_5_2)
+    sum_6_4, cout_6_4 = FA(sum_6_1, sum_6_2, carry_5_3)
+    sum2Column[6][0] = sum_6_3
+    sum2Column[6][1] = sum_6_4
+    carry_6_0 = cout_6_0
+    carry_6_1 = cout_6_1
+    carry_6_2 = cout_6_2
+    carry_6_3 = cout_6_3
+    carry_6_4 = cout_6_4
+    
+    #column 7 - 8 dots + 5 carries = 13 → 2 dots (5 FA, 1 HA)
+    sum_7_0, cout_7_0 = HA(partialProducts[0][7], partialProducts[7][0])
+    sum_7_1, cout_7_1 = FA(partialProducts[1][6], partialProducts[6][1], carry_6_0)
+    sum_7_2, cout_7_2 = FA(partialProducts[2][5], partialProducts[5][2], carry_6_1)
+    sum_7_3, cout_7_3 = FA(partialProducts[3][4], partialProducts[4][3], carry_6_2)
+    sum_7_4, cout_7_4 = FA(sum_7_0, sum_7_1, carry_6_3)
+    sum_7_5, cout_7_5 = FA(sum_7_2, sum_7_3, carry_6_4)
+    sum2Column[7][0] = sum_7_4
+    sum2Column[7][1] = sum_7_5
+    carry_7_0 = cout_7_0
+    carry_7_1 = cout_7_1
+    carry_7_2 = cout_7_2
+    carry_7_3 = cout_7_3
+    carry_7_4 = cout_7_4
+    carry_7_5 = cout_7_5
+    
+    #column 8 - 9 dots + 6 carries = 15 → 2 dots (6 FA, 1 HA)
+    sum_8_0, cout_8_0 = HA(partialProducts[0][8], partialProducts[8][0])
+    sum_8_1, cout_8_1 = FA(partialProducts[1][7], partialProducts[7][1], carry_7_0)
+    sum_8_2, cout_8_2 = FA(partialProducts[2][6], partialProducts[6][2], carry_7_1)
+    sum_8_3, cout_8_3 = FA(partialProducts[3][5], partialProducts[5][3], carry_7_2)
+    sum_8_4, cout_8_4 = FA(partialProducts[4][4], sum_8_0, carry_7_3)
+    sum_8_5, cout_8_5 = FA(sum_8_1, sum_8_2, carry_7_4)
+    sum_8_6, cout_8_6 = FA(sum_8_3, sum_8_4, carry_7_5)
+    sum2Column[8][0] = sum_8_5
+    sum2Column[8][1] = sum_8_6
+    carry_8_0 = cout_8_0
+    carry_8_1 = cout_8_1
+    carry_8_2 = cout_8_2
+    carry_8_3 = cout_8_3
+    carry_8_4 = cout_8_4
+    carry_8_5 = cout_8_5
+    carry_8_6 = cout_8_6
+    
+    #column 9 - 10 dots + 7 carries = 17 → 2 dots (7 FA, 1 HA)
+    sum_9_0, cout_9_0 = HA(partialProducts[0][9], partialProducts[9][0])
+    sum_9_1, cout_9_1 = FA(partialProducts[1][8], partialProducts[8][1], carry_8_0)
+    sum_9_2, cout_9_2 = FA(partialProducts[2][7], partialProducts[7][2], carry_8_1)
+    sum_9_3, cout_9_3 = FA(partialProducts[3][6], partialProducts[6][3], carry_8_2)
+    sum_9_4, cout_9_4 = FA(partialProducts[4][5], partialProducts[5][4], carry_8_3)
+    sum_9_5, cout_9_5 = FA(sum_9_0, sum_9_1, carry_8_4)
+    sum_9_6, cout_9_6 = FA(sum_9_2, sum_9_3, carry_8_5)
+    sum_9_7, cout_9_7 = FA(sum_9_4, sum_9_5, carry_8_6)
+    sum2Column[9][0] = sum_9_6
+    sum2Column[9][1] = sum_9_7
+    carry_9_0 = cout_9_0
+    carry_9_1 = cout_9_1
+    carry_9_2 = cout_9_2
+    carry_9_3 = cout_9_3
+    carry_9_4 = cout_9_4
+    carry_9_5 = cout_9_5
+    carry_9_6 = cout_9_6
+    carry_9_7 = cout_9_7
+    
+    #column 10 - 11 dots + 8 carries = 19 → 2 dots (8 FA, 1 HA)
+    sum_10_0, cout_10_0 = HA(partialProducts[0][10], partialProducts[10][0])
+    sum_10_1, cout_10_1 = FA(partialProducts[1][9], partialProducts[9][1], carry_9_0)
+    sum_10_2, cout_10_2 = FA(partialProducts[2][8], partialProducts[8][2], carry_9_1)
+    sum_10_3, cout_10_3 = FA(partialProducts[3][7], partialProducts[7][3], carry_9_2)
+    sum_10_4, cout_10_4 = FA(partialProducts[4][6], partialProducts[6][4], carry_9_3)
+    sum_10_5, cout_10_5 = FA(partialProducts[5][5], sum_10_0, carry_9_4)
+    sum_10_6, cout_10_6 = FA(sum_10_1, sum_10_2, carry_9_5)
+    sum_10_7, cout_10_7 = FA(sum_10_3, sum_10_4, carry_9_6)
+    sum_10_8, cout_10_8 = FA(sum_10_5, sum_10_6, carry_9_7)
+    sum2Column[10][0] = sum_10_7
+    sum2Column[10][1] = sum_10_8
+    carry_10_0 = cout_10_0
+    carry_10_1 = cout_10_1
+    carry_10_2 = cout_10_2
+    carry_10_3 = cout_10_3
+    carry_10_4 = cout_10_4
+    carry_10_5 = cout_10_5
+    carry_10_6 = cout_10_6
+    carry_10_7 = cout_10_7
+    carry_10_8 = cout_10_8
+    
+    #column 11 - 12 dots + 9 carries = 21 → 2 dots (9 FA, 1 HA)
+    sum_11_0, cout_11_0 = HA(partialProducts[0][11], partialProducts[11][0])
+    sum_11_1, cout_11_1 = FA(partialProducts[1][10], partialProducts[10][1], carry_10_0)
+    sum_11_2, cout_11_2 = FA(partialProducts[2][9], partialProducts[9][2], carry_10_1)
+    sum_11_3, cout_11_3 = FA(partialProducts[3][8], partialProducts[8][3], carry_10_2)
+    sum_11_4, cout_11_4 = FA(partialProducts[4][7], partialProducts[7][4], carry_10_3)
+    sum_11_5, cout_11_5 = FA(partialProducts[5][6], partialProducts[6][5], carry_10_4)
+    sum_11_6, cout_11_6 = FA(sum_11_0, sum_11_1, carry_10_5)
+    sum_11_7, cout_11_7 = FA(sum_11_2, sum_11_3, carry_10_6)
+    sum_11_8, cout_11_8 = FA(sum_11_4, sum_11_5, carry_10_7)
+    sum_11_9, cout_11_9 = FA(sum_11_6, sum_11_7, carry_10_8)
+    sum2Column[11][0] = sum_11_8
+    sum2Column[11][1] = sum_11_9
+    carry_11_0 = cout_11_0
+    carry_11_1 = cout_11_1
+    carry_11_2 = cout_11_2
+    carry_11_3 = cout_11_3
+    carry_11_4 = cout_11_4
+    carry_11_5 = cout_11_5
+    carry_11_6 = cout_11_6
+    carry_11_7 = cout_11_7
+    carry_11_8 = cout_11_8
+    carry_11_9 = cout_11_9
+    
+    #column 12 - 13 dots + 10 carries = 23 → 2 dots (10 FA, 1 HA)
+    sum_12_0, cout_12_0 = HA(partialProducts[0][12], partialProducts[12][0])
+    sum_12_1, cout_12_1 = FA(partialProducts[1][11], partialProducts[11][1], carry_11_0)
+    sum_12_2, cout_12_2 = FA(partialProducts[2][10], partialProducts[10][2], carry_11_1)
+    sum_12_3, cout_12_3 = FA(partialProducts[3][9], partialProducts[9][3], carry_11_2)
+    sum_12_4, cout_12_4 = FA(partialProducts[4][8], partialProducts[8][4], carry_11_3)
+    sum_12_5, cout_12_5 = FA(partialProducts[5][7], partialProducts[7][5], carry_11_4)
+    sum_12_6, cout_12_6 = FA(partialProducts[6][6], sum_12_0, carry_11_5)
+    sum_12_7, cout_12_7 = FA(sum_12_1, sum_12_2, carry_11_6)
+    sum_12_8, cout_12_8 = FA(sum_12_3, sum_12_4, carry_11_7)
+    sum_12_9, cout_12_9 = FA(sum_12_5, sum_12_6, carry_11_8)
+    sum_12_10, cout_12_10 = FA(sum_12_7, sum_12_8, carry_11_9)
+    sum2Column[12][0] = sum_12_9
+    sum2Column[12][1] = sum_12_10
+    carry_12_0 = cout_12_0
+    carry_12_1 = cout_12_1
+    carry_12_2 = cout_12_2
+    carry_12_3 = cout_12_3
+    carry_12_4 = cout_12_4
+    carry_12_5 = cout_12_5
+    carry_12_6 = cout_12_6
+    carry_12_7 = cout_12_7
+    carry_12_8 = cout_12_8
+    carry_12_9 = cout_12_9
+    carry_12_10 = cout_12_10
+    
+    #column 13 - 14 dots + 11 carries = 25 → 2 dots (11 FA, 1 HA)
+    sum_13_0, cout_13_0 = HA(partialProducts[0][13], partialProducts[13][0])
+    sum_13_1, cout_13_1 = FA(partialProducts[1][12], partialProducts[12][1], carry_12_0)
+    sum_13_2, cout_13_2 = FA(partialProducts[2][11], partialProducts[11][2], carry_12_1)
+    sum_13_3, cout_13_3 = FA(partialProducts[3][10], partialProducts[10][3], carry_12_2)
+    sum_13_4, cout_13_4 = FA(partialProducts[4][9], partialProducts[9][4], carry_12_3)
+    sum_13_5, cout_13_5 = FA(partialProducts[5][8], partialProducts[8][5], carry_12_4)
+    sum_13_6, cout_13_6 = FA(partialProducts[6][7], partialProducts[7][6], carry_12_5)
+    sum_13_7, cout_13_7 = FA(sum_13_0, sum_13_1, carry_12_6)
+    sum_13_8, cout_13_8 = FA(sum_13_2, sum_13_3, carry_12_7)
+    sum_13_9, cout_13_9 = FA(sum_13_4, sum_13_5, carry_12_8)
+    sum_13_10, cout_13_10 = FA(sum_13_6, sum_13_7, carry_12_9)
+    sum_13_11, cout_13_11 = FA(sum_13_8, sum_13_9, carry_12_10)
+    sum2Column[13][0] = sum_13_10
+    sum2Column[13][1] = sum_13_11
+    carry_13_0 = cout_13_0
+    carry_13_1 = cout_13_1
+    carry_13_2 = cout_13_2
+    carry_13_3 = cout_13_3
+    carry_13_4 = cout_13_4
+    carry_13_5 = cout_13_5
+    carry_13_6 = cout_13_6
+    carry_13_7 = cout_13_7
+    carry_13_8 = cout_13_8
+    carry_13_9 = cout_13_9
+    carry_13_10 = cout_13_10
+    carry_13_11 = cout_13_11
+    
+    #column 14 - 15 dots + 12 carries = 27 → 2 dots (12 FA, 1 HA)
+    sum_14_0, cout_14_0 = HA(partialProducts[0][14], partialProducts[14][0])
+    sum_14_1, cout_14_1 = FA(partialProducts[1][13], partialProducts[13][1], carry_13_0)
+    sum_14_2, cout_14_2 = FA(partialProducts[2][12], partialProducts[12][2], carry_13_1)
+    sum_14_3, cout_14_3 = FA(partialProducts[3][11], partialProducts[11][3], carry_13_2)
+    sum_14_4, cout_14_4 = FA(partialProducts[4][10], partialProducts[10][4], carry_13_3)
+    sum_14_5, cout_14_5 = FA(partialProducts[5][9], partialProducts[9][5], carry_13_4)
+    sum_14_6, cout_14_6 = FA(partialProducts[6][8], partialProducts[8][6], carry_13_5)
+    sum_14_7, cout_14_7 = FA(partialProducts[7][7], sum_14_0, carry_13_6)
+    sum_14_8, cout_14_8 = FA(sum_14_1, sum_14_2, carry_13_7)
+    sum_14_9, cout_14_9 = FA(sum_14_3, sum_14_4, carry_13_8)
+    sum_14_10, cout_14_10 = FA(sum_14_5, sum_14_6, carry_13_9)
+    sum_14_11, cout_14_11 = FA(sum_14_7, sum_14_8, carry_13_10)
+    sum_14_12, cout_14_12 = FA(sum_14_9, sum_14_10, carry_13_11)
+    sum2Column[14][0] = sum_14_11
+    sum2Column[14][1] = sum_14_12
+    carry_14_0 = cout_14_0
+    carry_14_1 = cout_14_1
+    carry_14_2 = cout_14_2
+    carry_14_3 = cout_14_3
+    carry_14_4 = cout_14_4
+    carry_14_5 = cout_14_5
+    carry_14_6 = cout_14_6
+    carry_14_7 = cout_14_7
+    carry_14_8 = cout_14_8
+    carry_14_9 = cout_14_9
+    carry_14_10 = cout_14_10
+    carry_14_11 = cout_14_11
+    carry_14_12 = cout_14_12
+    
+    #column 15 - 16 dots + 13 carries = 29 → 2 dots (13 FA, 1 HA)
+    sum_15_0, cout_15_0 = HA(partialProducts[0][15], partialProducts[15][0])
+    sum_15_1, cout_15_1 = FA(partialProducts[1][14], partialProducts[14][1], carry_14_0)
+    sum_15_2, cout_15_2 = FA(partialProducts[2][13], partialProducts[13][2], carry_14_1)
+    sum_15_3, cout_15_3 = FA(partialProducts[3][12], partialProducts[12][3], carry_14_2)
+    sum_15_4, cout_15_4 = FA(partialProducts[4][11], partialProducts[11][4], carry_14_3)
+    sum_15_5, cout_15_5 = FA(partialProducts[5][10], partialProducts[10][5], carry_14_4)
+    sum_15_6, cout_15_6 = FA(partialProducts[6][9], partialProducts[9][6], carry_14_5)
+    sum_15_7, cout_15_7 = FA(partialProducts[7][8], partialProducts[8][7], carry_14_6)
+    sum_15_8, cout_15_8 = FA(sum_15_0, sum_15_1, carry_14_7)
+    sum_15_9, cout_15_9 = FA(sum_15_2, sum_15_3, carry_14_8)
+    sum_15_10, cout_15_10 = FA(sum_15_4, sum_15_5, carry_14_9)
+    sum_15_11, cout_15_11 = FA(sum_15_6, sum_15_7, carry_14_10)
+    sum_15_12, cout_15_12 = FA(sum_15_8, sum_15_9, carry_14_11)
+    sum_15_13, cout_15_13 = FA(sum_15_10, sum_15_11, carry_14_12)
+    sum2Column[15][0] = sum_15_12
+    sum2Column[15][1] = sum_15_13
+    carry_15_0 = cout_15_0
+    carry_15_1 = cout_15_1
+    carry_15_2 = cout_15_2
+    carry_15_3 = cout_15_3
+    carry_15_4 = cout_15_4
+    carry_15_5 = cout_15_5
+    carry_15_6 = cout_15_6
+    carry_15_7 = cout_15_7
+    carry_15_8 = cout_15_8
+    carry_15_9 = cout_15_9
+    carry_15_10 = cout_15_10
+    carry_15_11 = cout_15_11
+    carry_15_12 = cout_15_12
+    carry_15_13 = cout_15_13
+    
+    #column 16 - 15 dots + 14 carries = 29 → 2 dots (13 FA, 1 HA)
+    sum_16_0, cout_16_0 = FA(partialProducts[1][15], partialProducts[15][1], carry_15_0)
+    sum_16_1, cout_16_1 = FA(partialProducts[2][14], partialProducts[14][2], carry_15_1)
+    sum_16_2, cout_16_2 = FA(partialProducts[3][13], partialProducts[13][3], carry_15_2)
+    sum_16_3, cout_16_3 = FA(partialProducts[4][12], partialProducts[12][4], carry_15_3)
+    sum_16_4, cout_16_4 = FA(partialProducts[5][11], partialProducts[11][5], carry_15_4)
+    sum_16_5, cout_16_5 = FA(partialProducts[6][10], partialProducts[10][6], carry_15_5)
+    sum_16_6, cout_16_6 = FA(partialProducts[7][9], partialProducts[9][7], carry_15_6)
+    sum_16_7, cout_16_7 = FA(partialProducts[8][8], sum_16_0, carry_15_7)
+    sum_16_8, cout_16_8 = FA(sum_16_1, sum_16_2, carry_15_8)
+    sum_16_9, cout_16_9 = FA(sum_16_3, sum_16_4, carry_15_9)
+    sum_16_10, cout_16_10 = FA(sum_16_5, sum_16_6, carry_15_10)
+    sum_16_11, cout_16_11 = FA(sum_16_7, sum_16_8, carry_15_11)
+    sum_16_12, cout_16_12 = FA(sum_16_9, sum_16_10, carry_15_12)
+    sum_16_13, cout_16_13 = HA(sum_16_11, carry_15_13)
+    sum2Column[16][0] = sum_16_12
+    sum2Column[16][1] = sum_16_13
+    carry_16_0 = cout_16_0
+    carry_16_1 = cout_16_1
+    carry_16_2 = cout_16_2
+    carry_16_3 = cout_16_3
+    carry_16_4 = cout_16_4
+    carry_16_5 = cout_16_5
+    carry_16_6 = cout_16_6
+    carry_16_7 = cout_16_7
+    carry_16_8 = cout_16_8
+    carry_16_9 = cout_16_9
+    carry_16_10 = cout_16_10
+    carry_16_11 = cout_16_11
+    carry_16_12 = cout_16_12
+    carry_16_13 = cout_16_13
+    
+    #column 17 - 14 dots + 14 carries = 28 → 2 dots (13 FA)
+    sum_17_0, cout_17_0 = FA(partialProducts[2][15], partialProducts[15][2], carry_16_0)
+    sum_17_1, cout_17_1 = FA(partialProducts[3][14], partialProducts[14][3], carry_16_1)
+    sum_17_2, cout_17_2 = FA(partialProducts[4][13], partialProducts[13][4], carry_16_2)
+    sum_17_3, cout_17_3 = FA(partialProducts[5][12], partialProducts[12][5], carry_16_3)
+    sum_17_4, cout_17_4 = FA(partialProducts[6][11], partialProducts[11][6], carry_16_4)
+    sum_17_5, cout_17_5 = FA(partialProducts[7][10], partialProducts[10][7], carry_16_5)
+    sum_17_6, cout_17_6 = FA(partialProducts[8][9], partialProducts[9][8], carry_16_6)
+    sum_17_7, cout_17_7 = FA(sum_17_0, sum_17_1, carry_16_7)
+    sum_17_8, cout_17_8 = FA(sum_17_2, sum_17_3, carry_16_8)
+    sum_17_9, cout_17_9 = FA(sum_17_4, sum_17_5, carry_16_9)
+    sum_17_10, cout_17_10 = FA(sum_17_6, sum_17_7, carry_16_10)
+    sum_17_11, cout_17_11 = FA(sum_17_8, sum_17_9, carry_16_11)
+    sum_17_12, cout_17_12 = FA(sum_17_10, carry_16_12, carry_16_13)
+    sum2Column[17][0] = sum_17_11
+    sum2Column[17][1] = sum_17_12
+    carry_17_0 = cout_17_0
+    carry_17_1 = cout_17_1
+    carry_17_2 = cout_17_2
+    carry_17_3 = cout_17_3
+    carry_17_4 = cout_17_4
+    carry_17_5 = cout_17_5
+    carry_17_6 = cout_17_6
+    carry_17_7 = cout_17_7
+    carry_17_8 = cout_17_8
+    carry_17_9 = cout_17_9
+    carry_17_10 = cout_17_10
+    carry_17_11 = cout_17_11
+    carry_17_12 = cout_17_12
+    
+    #column 18 - 13 dots + 13 carries = 26 → 2 dots (12 FA)
+    sum_18_0, cout_18_0 = FA(partialProducts[3][15], partialProducts[15][3], carry_17_0)
+    sum_18_1, cout_18_1 = FA(partialProducts[4][14], partialProducts[14][4], carry_17_1)
+    sum_18_2, cout_18_2 = FA(partialProducts[5][13], partialProducts[13][5], carry_17_2)
+    sum_18_3, cout_18_3 = FA(partialProducts[6][12], partialProducts[12][6], carry_17_3)
+    sum_18_4, cout_18_4 = FA(partialProducts[7][11], partialProducts[11][7], carry_17_4)
+    sum_18_5, cout_18_5 = FA(partialProducts[8][10], partialProducts[10][8], carry_17_5)
+    sum_18_6, cout_18_6 = FA(partialProducts[9][9], sum_18_0, carry_17_6)
+    sum_18_7, cout_18_7 = FA(sum_18_1, sum_18_2, carry_17_7)
+    sum_18_8, cout_18_8 = FA(sum_18_3, sum_18_4, carry_17_8)
+    sum_18_9, cout_18_9 = FA(sum_18_5, sum_18_6, carry_17_9)
+    sum_18_10, cout_18_10 = FA(sum_18_7, sum_18_8, carry_17_10)
+    sum_18_11, cout_18_11 = FA(sum_18_9, carry_17_11, carry_17_12)
+    sum2Column[18][0] = sum_18_10
+    sum2Column[18][1] = sum_18_11
+    carry_18_0 = cout_18_0
+    carry_18_1 = cout_18_1
+    carry_18_2 = cout_18_2
+    carry_18_3 = cout_18_3
+    carry_18_4 = cout_18_4
+    carry_18_5 = cout_18_5
+    carry_18_6 = cout_18_6
+    carry_18_7 = cout_18_7
+    carry_18_8 = cout_18_8
+    carry_18_9 = cout_18_9
+    carry_18_10 = cout_18_10
+    carry_18_11 = cout_18_11
+    
+    #column 19 - 12 dots + 12 carries = 24 → 2 dots (11 FA)
+    sum_19_0, cout_19_0 = FA(partialProducts[4][15], partialProducts[15][4], carry_18_0)
+    sum_19_1, cout_19_1 = FA(partialProducts[5][14], partialProducts[14][5], carry_18_1)
+    sum_19_2, cout_19_2 = FA(partialProducts[6][13], partialProducts[13][6], carry_18_2)
+    sum_19_3, cout_19_3 = FA(partialProducts[7][12], partialProducts[12][7], carry_18_3)
+    sum_19_4, cout_19_4 = FA(partialProducts[8][11], partialProducts[11][8], carry_18_4)
+    sum_19_5, cout_19_5 = FA(partialProducts[9][10], partialProducts[10][9], carry_18_5)
+    sum_19_6, cout_19_6 = FA(sum_19_0, sum_19_1, carry_18_6)
+    sum_19_7, cout_19_7 = FA(sum_19_2, sum_19_3, carry_18_7)
+    sum_19_8, cout_19_8 = FA(sum_19_4, sum_19_5, carry_18_8)
+    sum_19_9, cout_19_9 = FA(sum_19_6, sum_19_7, carry_18_9)
+    sum_19_10, cout_19_10 = FA(sum_19_8, carry_18_10, carry_18_11)
+    sum2Column[19][0] = sum_19_9
+    sum2Column[19][1] = sum_19_10
+    carry_19_0 = cout_19_0
+    carry_19_1 = cout_19_1
+    carry_19_2 = cout_19_2
+    carry_19_3 = cout_19_3
+    carry_19_4 = cout_19_4
+    carry_19_5 = cout_19_5
+    carry_19_6 = cout_19_6
+    carry_19_7 = cout_19_7
+    carry_19_8 = cout_19_8
+    carry_19_9 = cout_19_9
+    carry_19_10 = cout_19_10
+    
+    #column 20 - 11 dots + 11 carries = 22 → 2 dots (10 FA)
+    sum_20_0, cout_20_0 = FA(partialProducts[5][15], partialProducts[15][5], carry_19_0)
+    sum_20_1, cout_20_1 = FA(partialProducts[6][14], partialProducts[14][6], carry_19_1)
+    sum_20_2, cout_20_2 = FA(partialProducts[7][13], partialProducts[13][7], carry_19_2)
+    sum_20_3, cout_20_3 = FA(partialProducts[8][12], partialProducts[12][8], carry_19_3)
+    sum_20_4, cout_20_4 = FA(partialProducts[9][11], partialProducts[11][9], carry_19_4)
+    sum_20_5, cout_20_5 = FA(partialProducts[10][10], sum_20_0, carry_19_5)
+    sum_20_6, cout_20_6 = FA(sum_20_1, sum_20_2, carry_19_6)
+    sum_20_7, cout_20_7 = FA(sum_20_3, sum_20_4, carry_19_7)
+    sum_20_8, cout_20_8 = FA(sum_20_5, sum_20_6, carry_19_8)
+    sum_20_9, cout_20_9 = FA(sum_20_7, carry_19_9, carry_19_10)
+    sum2Column[20][0] = sum_20_8
+    sum2Column[20][1] = sum_20_9
+    carry_20_0 = cout_20_0
+    carry_20_1 = cout_20_1
+    carry_20_2 = cout_20_2
+    carry_20_3 = cout_20_3
+    carry_20_4 = cout_20_4
+    carry_20_5 = cout_20_5
+    carry_20_6 = cout_20_6
+    carry_20_7 = cout_20_7
+    carry_20_8 = cout_20_8
+    carry_20_9 = cout_20_9
+    
+    #column 21 - 10 dots + 10 carries = 20 → 2 dots (9 FA)
+    sum_21_0, cout_21_0 = FA(partialProducts[6][15], partialProducts[15][6], carry_20_0)
+    sum_21_1, cout_21_1 = FA(partialProducts[7][14], partialProducts[14][7], carry_20_1)
+    sum_21_2, cout_21_2 = FA(partialProducts[8][13], partialProducts[13][8], carry_20_2)
+    sum_21_3, cout_21_3 = FA(partialProducts[9][12], partialProducts[12][9], carry_20_3)
+    sum_21_4, cout_21_4 = FA(partialProducts[10][11], partialProducts[11][10], carry_20_4)
+    sum_21_5, cout_21_5 = FA(sum_21_0, sum_21_1, carry_20_5)
+    sum_21_6, cout_21_6 = FA(sum_21_2, sum_21_3, carry_20_6)
+    sum_21_7, cout_21_7 = FA(sum_21_4, sum_21_5, carry_20_7)
+    sum_21_8, cout_21_8 = FA(sum_21_6, carry_20_8, carry_20_9)
+    sum2Column[21][0] = sum_21_7
+    sum2Column[21][1] = sum_21_8
+    carry_21_0 = cout_21_0
+    carry_21_1 = cout_21_1
+    carry_21_2 = cout_21_2
+    carry_21_3 = cout_21_3
+    carry_21_4 = cout_21_4
+    carry_21_5 = cout_21_5
+    carry_21_6 = cout_21_6
+    carry_21_7 = cout_21_7
+    carry_21_8 = cout_21_8
+    
+    #column 22 - 9 dots + 9 carries = 18 → 2 dots (8 FA)
+    sum_22_0, cout_22_0 = FA(partialProducts[7][15], partialProducts[15][7], carry_21_0)
+    sum_22_1, cout_22_1 = FA(partialProducts[8][14], partialProducts[14][8], carry_21_1)
+    sum_22_2, cout_22_2 = FA(partialProducts[9][13], partialProducts[13][9], carry_21_2)
+    sum_22_3, cout_22_3 = FA(partialProducts[10][12], partialProducts[12][10], carry_21_3)
+    sum_22_4, cout_22_4 = FA(partialProducts[11][11], sum_22_0, carry_21_4)
+    sum_22_5, cout_22_5 = FA(sum_22_1, sum_22_2, carry_21_5)
+    sum_22_6, cout_22_6 = FA(sum_22_3, sum_22_4, carry_21_6)
+    sum_22_7, cout_22_7 = FA(sum_22_5, carry_21_7, carry_21_8)
+    sum2Column[22][0] = sum_22_6
+    sum2Column[22][1] = sum_22_7
+    carry_22_0 = cout_22_0
+    carry_22_1 = cout_22_1
+    carry_22_2 = cout_22_2
+    carry_22_3 = cout_22_3
+    carry_22_4 = cout_22_4
+    carry_22_5 = cout_22_5
+    carry_22_6 = cout_22_6
+    carry_22_7 = cout_22_7
+    
+    #column 23 - 8 dots + 8 carries = 16 → 2 dots (7 FA)
+    sum_23_0, cout_23_0 = FA(partialProducts[8][15], partialProducts[15][8], carry_22_0)
+    sum_23_1, cout_23_1 = FA(partialProducts[9][14], partialProducts[14][9], carry_22_1)
+    sum_23_2, cout_23_2 = FA(partialProducts[10][13], partialProducts[13][10], carry_22_2)
+    sum_23_3, cout_23_3 = FA(partialProducts[11][12], partialProducts[12][11], carry_22_3)
+    sum_23_4, cout_23_4 = FA(sum_23_0, sum_23_1, carry_22_4)
+    sum_23_5, cout_23_5 = FA(sum_23_2, sum_23_3, carry_22_5)
+    sum_23_6, cout_23_6 = FA(sum_23_4, carry_22_6, carry_22_7)
+    sum2Column[23][0] = sum_23_5
+    sum2Column[23][1] = sum_23_6
+    carry_23_0 = cout_23_0
+    carry_23_1 = cout_23_1
+    carry_23_2 = cout_23_2
+    carry_23_3 = cout_23_3
+    carry_23_4 = cout_23_4
+    carry_23_5 = cout_23_5
+    carry_23_6 = cout_23_6
+    
+    #column 24 - 7 dots + 7 carries = 14 → 2 dots (6 FA)
+    sum_24_0, cout_24_0 = FA(partialProducts[9][15], partialProducts[15][9], carry_23_0)
+    sum_24_1, cout_24_1 = FA(partialProducts[10][14], partialProducts[14][10], carry_23_1)
+    sum_24_2, cout_24_2 = FA(partialProducts[11][13], partialProducts[13][11], carry_23_2)
+    sum_24_3, cout_24_3 = FA(partialProducts[12][12], sum_24_0, carry_23_3)
+    sum_24_4, cout_24_4 = FA(sum_24_1, sum_24_2, carry_23_4)
+    sum_24_5, cout_24_5 = FA(sum_24_3, carry_23_5, carry_23_6)
+    sum2Column[24][0] = sum_24_4
+    sum2Column[24][1] = sum_24_5
+    carry_24_0 = cout_24_0
+    carry_24_1 = cout_24_1
+    carry_24_2 = cout_24_2
+    carry_24_3 = cout_24_3
+    carry_24_4 = cout_24_4
+    carry_24_5 = cout_24_5
+    
+    #column 25 - 6 dots + 6 carries = 12 → 2 dots (5 FA)
+    sum_25_0, cout_25_0 = FA(partialProducts[10][15], partialProducts[15][10], carry_24_0)
+    sum_25_1, cout_25_1 = FA(partialProducts[11][14], partialProducts[14][11], carry_24_1)
+    sum_25_2, cout_25_2 = FA(partialProducts[12][13], partialProducts[13][12], carry_24_2)
+    sum_25_3, cout_25_3 = FA(sum_25_0, sum_25_1, carry_24_3)
+    sum_25_4, cout_25_4 = FA(sum_25_2, carry_24_4, carry_24_5)
+    sum2Column[25][0] = sum_25_3
+    sum2Column[25][1] = sum_25_4
+    carry_25_0 = cout_25_0
+    carry_25_1 = cout_25_1
+    carry_25_2 = cout_25_2
+    carry_25_3 = cout_25_3
+    carry_25_4 = cout_25_4
+    
+    #column 26 - 5 dots + 5 carries = 10 → 2 dots (4 FA)
+    sum_26_0, cout_26_0 = FA(partialProducts[11][15], partialProducts[15][11], carry_25_0)
+    sum_26_1, cout_26_1 = FA(partialProducts[12][14], partialProducts[14][12], carry_25_1)
+    sum_26_2, cout_26_2 = FA(partialProducts[13][13], sum_26_0, carry_25_2)
+    sum_26_3, cout_26_3 = FA(sum_26_1, carry_25_3, carry_25_4)
+    sum2Column[26][0] = sum_26_2
+    sum2Column[26][1] = sum_26_3
+    carry_26_0 = cout_26_0
+    carry_26_1 = cout_26_1
+    carry_26_2 = cout_26_2
+    carry_26_3 = cout_26_3
+    
+    #column 27 - 4 dots + 4 carries = 8 → 2 dots (3 FA)
+    sum_27_0, cout_27_0 = FA(partialProducts[12][15], partialProducts[15][12], carry_26_0)
+    sum_27_1, cout_27_1 = FA(partialProducts[13][14], partialProducts[14][13], carry_26_1)
+    sum_27_2, cout_27_2 = FA(sum_27_0, carry_26_2, carry_26_3)
+    sum2Column[27][0] = sum_27_1
+    sum2Column[27][1] = sum_27_2
+    carry_27_0 = cout_27_0
+    carry_27_1 = cout_27_1
+    carry_27_2 = cout_27_2
+    
+    #column 28 - 3 dots + 3 carries = 6 → 2 dots (2 FA)
+    sum_28_0, cout_28_0 = FA(partialProducts[13][15], partialProducts[15][13], carry_27_0)
+    sum_28_1, cout_28_1 = FA(partialProducts[14][14], carry_27_1, carry_27_2)
+    sum2Column[28][0] = sum_28_0
+    sum2Column[28][1] = sum_28_1
+    carry_28_0 = cout_28_0
+    carry_28_1 = cout_28_1
+    
+    #column 29 - 2 dots + 2 carries = 4 → 2 dots (1 FA)
+    sum_29_0, cout_29_0 = FA(partialProducts[14][15], partialProducts[15][14], carry_28_0)
+    sum2Column[29][0] = sum_29_0
+    sum2Column[29][1] = carry_28_1
+    carry_29_0 = cout_29_0
+    
+    #column 30 - 1 dot + 1 carry = 2 dots
+    sum2Column[30][0] = partialProducts[15][15]
+    sum2Column[30][1] = carry_29_0
+    
+    #column 31 - just propagate if any final carry
+    sum2Column[31][0] = False
+    sum2Column[31][1] = False
+    
+    # Final ripple carry addition
+    row0 = [sum2Column[i][0] for i in range(32)]
+    row1 = [sum2Column[i][1] for i in range(32)]
+    
+    product = [False] * 32
+    carry = False
+    for i in range(32):
+        product[i], carry = fullAdder(row0[i], row1[i], carry)
+    
+    return product
+# # #16bit divider
+# def bitDiv16(a, b):
+
+# =====  tiny primitives  ==================================================
+def HA(a, b):                               # half-adder
+    return a ^ b, a & b
+
+def FA(a, b, c):                            # full-adder
+    s  = a ^ b ^ c
+    co = (a & b) | (b & c) | (a & c)
+    return s, co
+
+def addBits(a, b, cin=False):               # n-bit adder
+    out, c = [], cin
+    for i in range(len(a)):
+        s, c = FA(a[i], b[i], c)
+        out.append(s)
+    return out, c
+
+def twoComp(v):                             # two’s-complement negate
+    inv = [not b for b in v]
+    one = [True] + [False]*(len(v)-1)
+    return addBits(inv, one)[0]
+
+def subBits(a, b):                          # a − b
+    return addBits(a, twoComp(b))[0]
+
+def shiftLeft(bits, in_bit):                # logical shift-left by 1
+    return [in_bit] + bits[:-1]
+# -------------------------------------------------------------------------
+
+def _uDiv_nonrestoring(dividend, divisor):
+    """Unsigned, non-restoring division (n-bit) → (Q, R)"""
+    n   = len(dividend)
+    Q   = [False]*n
+    R   = [False]*(n+1)            # one extra sign bit
+    D   = divisor + [False]        # align width
+
+    for i in range(n-1, -1, -1):   # MSB → LSB
+        R = shiftLeft(R, dividend[i])
+
+        if not R[-1]:              # R ≥ 0 → subtract
+            R = subBits(R, D)
+        else:                      # R < 0 → add
+            R, _ = addBits(R, D)
+
+        Q[i] = not R[-1]           # quotient bit = ¬sign(R)
+
+    if R[-1]:                      # final sign fix if negative
+        R, _ = addBits(R, D)
+
+    return Q, R[:-1]               # drop extra sign bit
+
+# -------------------------------------------------------------------------
+def bitDiv16_nonrestoring(a_bits, b_bits):
+    """
+    Gate-level 16-bit signed division (non-restoring).
+    Returns  (quotient[16], remainder[16])  -- both LSB-first.
+    Raises ZeroDivisionError on b == 0.
+    """
+    n = 16
+    sign_a, sign_b = a_bits[15], b_bits[15]
+
+    # magnitudes
+    A = twoComp(a_bits) if sign_a else a_bits[:]
+    B = twoComp(b_bits) if sign_b else b_bits[:]
+    if B.count(True) == 0:
+        raise ZeroDivisionError
+
+    Qmag, Rmag = _uDiv_nonrestoring(A, B)
+
+    # apply signs
+    Q = twoComp(Qmag) if sign_a ^ sign_b else Qmag
+    R = twoComp(Rmag) if sign_a         else Rmag
+
+    return Q[:n], R[:n]
 
 
-# # #32bit divider
-# def bitDiv32(a, b):
 
 
+# def bitDiv4(A, B):
+    
+#     # a and b are lists of 4 bits: a[3] is MSB, a[0] is LSB
+#     # Implements a 4-bit binary comparator for division (not a full divider)
+#     # The logic is based on bitwise comparison, rewritten to use a/b indices
+
+#     # Helper functions for logic
+#     def xnor(x, y):
+#         return (x and y) or (not x and not y)
+#     def comparatorCircuit(A,B):
+#         b1 = a[3] and not b[3]
+#         b2 = xnor(a[3], b[3]) and (a[2] and not b[2])
+#         b3 = xnor(a[3], b[3]) and xnor(a[2], b[2]) and (a[1] and not b[1])
+#         b4 = xnor(a[3], b[3]) and xnor(a[2], b[2]) and xnor(a[1], b[1]) and (a[0] and not b[0])
+#         b5 = xnor(a[3], b[3]) and xnor(a[2], b[2]) and xnor(a[1], b[1]) and xnor(a[0], b[0])
+#         bitDec = b1 or b2 or b3 or b4 or b5
+#         return bitDec
+    
 
 def bitAdd16(a, b, c_in):
     s = [False] * 16
@@ -160,6 +813,8 @@ def bitAdd16(a, b, c_in):
         s[i], c[i + 1] = fullAdder(a[i], b[i], c[i])
     return s, c[16]
 
+#should in theory work fine for both positive and negative in 2s complement
+#might need to add zero and carry flags.
 def bitAdd5(a, b, c_in):
     s = [False] * 5
     c = [False] * (5+1)
@@ -169,6 +824,43 @@ def bitAdd5(a, b, c_in):
     return s, c[5]
 
 # def bitFPAdd32(a, b):
+
+def bitMul16(a_bits, b_bits):
+    n = 16
+    # --- partial products -------------------------------------------------
+    pp = [[a_bits[i] and b_bits[j] for j in range(n)] for i in range(n)]
+    for j in range(n-1):               # invert MSB row
+        pp[n-1][j] = not pp[n-1][j]
+    for i in range(n-1):               # invert MSB col
+        pp[i][n-1] = not pp[i][n-1]
+
+    # --- bucket dots by column -------------------------------------------
+    cols = [[] for _ in range(2*n)]
+    for i in range(n):
+        for j in range(n):
+            cols[i+j].append(pp[i][j])
+    cols[n].append(True)               # two Baugh-Wooley correction 1’s
+    cols[2*n-1].append(True)
+
+    # --- Dadda compression to 2 rows -------------------------------------
+    sums  = [False]*(2*n)
+    carys = [False]*(2*n)
+    for k in range(2*n):
+        while len(cols[k]) > 2:
+            s,c = FA(cols[k].pop(), cols[k].pop(), cols[k].pop())
+            cols[k].append(s)
+            if k < 2*n-1:
+                cols[k+1].append(c)
+        if cols[k]: sums[k]  = cols[k].pop()
+        if cols[k]: carys[k] = cols[k].pop()
+
+    # --- final ripple-carry adder ----------------------------------------
+    P   = [False]*(2*n)
+    cin = False
+    for k in range(2*n):
+        P[k], cin = FA(sums[k], carys[k], cin)
+    return P
+
 
 # def bitFPSub32(a, b):
 
@@ -652,13 +1344,51 @@ apply Final Ripple Carry Adder to output --> 22bit output product.
 
 """
 
+def bitMul11(a_bits, b_bits):
+    """
+    11×11 unsigned multiplier
+    • inputs : a_bits[0..10], b_bits[0..10]  (LSB-first, bools)
+    • output : product[0..21]               (LSB-first, bools)
+    """
+    n = 11
+    cols = [[] for _ in range(2*n)]          # bucket dots by weight
+
+    # --- 1. partial products ------------------------------------------------
+    for i in range(n):
+        if not a_bits[i]:
+            continue                         # skip zero rows early
+        for j in range(n):
+            if b_bits[j]:
+                cols[i+j].append(True)       # only keep ‘1’ dots
+
+    # --- 2. Dadda-style compression to 2 rows ------------------------------
+    sums  = [False]*(2*n)
+    carys = [False]*(2*n)
+
+    for k in range(2*n):
+        while len(cols[k]) > 2:              # keep height ≤ 2
+            s, c = FA(cols[k].pop(),
+                      cols[k].pop(),
+                      cols[k].pop())
+            cols[k].append(s)
+            if k < 2*n-1:
+                cols[k+1].append(c)
+        if cols[k]:
+            sums[k]  = cols[k].pop()
+        if cols[k]:
+            carys[k] = cols[k].pop()
+
+    # --- 3. final ripple-carry adder ---------------------------------------
+    product, cin = [False]*(2*n), False
+    for k in range(2*n):
+        product[k], cin = FA(sums[k], carys[k], cin)
+    return product
 
 
-
-def bitMul11(a,b):
+def bitMul11Old(a,b):
     partialProducts = [[a[i] & b[j] for j in range(11)] for i in range(11)]
     sum2Column = [[False, False] for _ in range(22)]
-    print(partialProducts)
+    #print(partialProducts)
     #column 0
     sum2Column[0][0] = partialProducts[0][0]
 
@@ -926,10 +1656,10 @@ def bitMul11(a,b):
     #column 21 - just propagate final carry if any
     sum2Column[21][0] = False
     sum2Column[21][1] = False
-    for i in range(22):
-        print(f"first added vals: {sum2Column[i][0]}")
-    for i in range(22):
-        print(f"second added vals: {sum2Column[i][1]}")
+    #for i in range(22):
+        #print(f"first added vals: {sum2Column[i][0]}")
+    #for i in range(22):
+        #print(f"second added vals: {sum2Column[i][1]}")
     row0 = [sum2Column[i][0] for i in range(22)]
     row1 = [sum2Column[i][1] for i in range(22)]
 
@@ -937,51 +1667,72 @@ def bitMul11(a,b):
     carry = False
     for i in range(22):
         product[i], carry = fullAdder(row0[i], row1[i], carry)
-
+    print("product 22bit: ", product)
     return product
 
 def bitFPMul16(a, b):
     signBit = a[15] ^ b[15]
     #a and b are 16bit floats
     #negate. We use -15? [True,False,False,False,True] (msb is last array index)
-    bitNeg15 = [True,False,False,False,True]
-    bitPos15 = [False,True,True,True,True]
+    bitNeg15 = [True,False,False,False,True] 
+    bitPos15 = [True,True,True,True,False]
     print(f"a: {a}")
     print(f"b: {b}")
     print(f"bitNeg15: {bitNeg15}")
     print(f"bitPos15: {bitPos15}")
-    interimA, carry_out1 = bitAdd5(a[10:15],b[10:15],True)#subtract 15 from a --> unbiased exponent
-    outExp, carry_out2 = bitAdd5(interimA,bitNeg15,True)#subtract 15 from b --> unbiased exponent
-    print(f"interimA: {interimA}")
-    print(f"outExp after subtracting 15: {outExp}")
+    # invertedB = ~(b[10:15])
+    # print("invertedB:", invertedB)
+    unbiasedA,cout_a = bitAdd5(a[10:15],bitNeg15,False) #carryin for adder matters in both these cases, its how we differentiate
+    unbiasedB,cout_b = bitAdd5(b[10:15],bitNeg15,False)
+    inverted_unbiasedB = [not bit for bit in unbiasedB] #turns 11011 (-5) into 00100 
+    #print("unbiasedA",unbiasedA,"unbiasedB",unbiasedB,"inverted_unbiasedB",inverted_unbiasedB)
+    #(with carry-->00101), that is, positive 5
+    interimA, carry_out1 = bitAdd5(unbiasedA,unbiasedB,False)#subtract b from a
+    #outExp, carry_out2 = bitAdd5(interimA,bitNeg15,True)#subtract 15 from b --> unbiased exponent
+    #print(f"interimA: {interimA}")
+    #print(f"outExp after subtracting 15: {outExp}")
     
     # outExp, carry_outexp2 = bitAdd5(outExp,bitPos15,False)#add 15 to bias the exponent
 
-
+    #print("a[0:10]+[True]:",a[0:10]+[True])
     #multiply the 10bit mantissas (actually 11bit via implicit 1s) to get 22bit product
-    bit22Mantissa = bitMul11(a[5:],b[5:])
-    out = bit22Mantissa[11:21]+outExp+ [signBit]  
+    bit22Mantissa = bitMul11(a[0:10]+[True],b[0:10]+[True]) #adding implicit leading 1s
+    print(f"bit22Mantissa: {bit22Mantissa}")
+    shifted22Mantissa = bit22Mantissa
+    #handle shift logic
+    if(bit22Mantissa[21] == True):
+        #shift right
+        shifted22Mantissa = bit22Mantissa[1:] + [False]
+        interimA, carry_out2 = bitAdd5(interimA,[True,False,False,False,False],False)
+        print("final interimA (it needed to be incremented by 1, before biasing):",interimA)
+    else:
+        pass
+    print("final shifted22Mantissa:",shifted22Mantissa)
+    biasedExp,cout = bitAdd5(interimA,bitPos15,False)
+    print("biasedExp:",biasedExp)
+    #last 2 msbs left out, the 2nd to last would be the implicit 1
+    out = shifted22Mantissa[10:20]+biasedExp+ [signBit]  
     
     return out
     #specific 
     #multiplication
 
-def halfAdder(a, b):
-    s = a ^ b
-    cout = a & b
-    return s, cout
-
-def fullAdder(a, b, cin):
-    x1 = a ^ b
-    s  = x1 ^ cin
-    a1 = a & b
-    a2 = cin & x1
-    cout = a1 | a2
-    return s, cout
+# def bitFPAdd16(a, b):
 
 
 
-# def bitFPDiv32(a, b):
+
+# def bitFPDiv16(a, b):
+
+
+
+
+#     #normalization:
+#     #GRS
+#     #roundup = G & (output[lsb] | R | S) 
+
+
+
 
 # # #32bit shifter
 # def bitShifter32():
@@ -1012,6 +1763,31 @@ def convertToDecimal(r):
         final -= 2 ** lengthM1
     return final
 
+def convertFloatBinaryToDecimal(a): 
+    bitNeg15 = [True,False,False,False,True]    
+    unbiasedExp,cout = bitAdd5(a[10:15],bitNeg15,False)
+    print("unbiasedExp:",unbiasedExp)
+    b=unbiasedExp
+
+    mantissaFrac = 0
+    for j in range(0, 10):
+        currentBit = 1 if a[j] else 0
+        mantissaFrac += currentBit * 2 ** (j - 10)
+    print("mantissaFrac:",mantissaFrac)
+    mantissaFrac+=1
+    expsum = 0
+    for i in range(10, 15):
+        currentBit = 1 if b[i-10] else 0
+        #print(f"i: {i}, currentBit: {currentBit}")
+        if i == 14:
+            expsum += -16
+        else:
+            expsum += currentBit * 2 ** (i - 10)
+        #print(f"i: {i}, expsum: {expsum}")
+    print("expsum:",expsum)
+    sign = -1 if a[15] else 1
+    return mantissaFrac * 2**expsum * sign
+
 def convert_bool_to_binary(bool_list):
     # Convert list of bools to list of 0s and 1s
     return [1 if value else 0 for value in bool_list]
@@ -1032,6 +1808,8 @@ def reverseArray(r):
         new_arr.append(r[i])
     return new_arr
 
+
+
 def testTwoNums():
     
     # 11-bit value: alternating False/True
@@ -1040,8 +1818,20 @@ def testTwoNums():
     multt1 = [False]*3 + [True]*4 + [False]*4 #8+16+32+64=120
     multt2 = [False]*5 + [True]*1 + [False]*5 #32
 
-    multt3 = [False]*6 + [True]*4 + [False]*1 #64+128+256+512=960
-    multt4 = [False]*6 + [True]*1 + [False]*4 #64
+    # 16-bit value: 
+    # Let's pick two random numbers between 0 and 65000 for demonstration
+    # For example: 32745 and 49218
+
+    # Helper to convert integer to 16-bit LSB-first boolean list
+    def int_to_bool_list(n, bits=16):
+        return [(n >> i) & 1 == 1 for i in range(bits)]
+
+    multt3_val = 325
+    multt4_val = 48
+    multt3 = int_to_bool_list(multt3_val)
+    multt4 = int_to_bool_list(multt4_val)
+    print(f"multt3: {multt3}")
+    print(f"multt4: {multt4}")
     #960*64=61440
     print(f"multt1 (decimal): {convertToDecimalOnlyPositiveUnsigned(convert_bool_to_binary(multt1))}")
     print(f"multt2 (decimal): {convertToDecimalOnlyPositiveUnsigned(convert_bool_to_binary(multt2))}")
@@ -1052,53 +1842,62 @@ def testTwoNums():
     print(f"bool to binary: {convert_bool_to_binary(result_mult)}")
     print(f"Human readable product: {convertToString(reverseArray(convert_bool_to_binary(result_mult)))}")
     
-    result_mult2 = bitMul11(multt3, multt4)
+    result_mult2 = bitMul16(multt3, multt4)
     print(f"result_mult2: {result_mult2}")
-    print(f"Binary product: {convertToDecimalOnlyPositiveUnsigned(convert_bool_to_binary(result_mult2))}")
+    print(f"Binary product: {convertToDecimal(convert_bool_to_binary(result_mult2))}")
     print(f"bool to binary: {convert_bool_to_binary(result_mult2)}")
     print(f"Human readable product: {convertToString(reverseArray(convert_bool_to_binary(result_mult2)))}")
     
-    #floatingpoint
-    # fpa represents 12.0546875
-    fpa = [
-        False,                   # sign bit = 0 → positive
-        True, False, False,     # exponent bits [1,0,0]
-        True, False,              #             [1,0] → unbiased exponent = 18 - bias = 3
-        # implicit leading-1 + mantissa bits:
-        True, False, False, False, False, False, False, True, True, True
-        # mantissa (binary): 1.1000000111
-    ]
-    # this value = 1.1000000111 (binary) × 2³ = 1.53125 × 8 = 12.0546875
+    # #floatingpoint
+    # # fpa represents 12.0546875
+    # fpa = [
+    #     False,                   # sign bit = 0 → positive
+    #     True, False, False,     # exponent bits [1,0,0]
+    #     True, False,              #             [1,0] → unbiased exponent = 18 - bias = 3
+    #     # implicit leading-1 + mantissa bits:
+    #     True, False, False, False, False, False, False, True, True, True
+    #     # mantissa (binary): 1.1000000111
+    # ]
+    # # this value = 1.1000000111 (binary) × 2³ = 1.53125 × 8 = 12.0546875
 
 
-    # fpb represents 417.25
+    # fpb represents 
     fpb = [
-        False,                   # sign bit = 0 → positive
-        True, False, True, True, True,
-        # exponent bits [1,0,1,1,1] → unbiased exponent = 23 − bias=8
+                           
+        
         # implicit leading-1 + mantissa bits:
-        True, False, True, False, False, False, False, True, False, True
-        # mantissa (binary): 1.1010000101
+        # mantissa (binary): 1.1010000101 
+        True, False, True, False, False, False, False, True, False, True,
+        # exponent bits [1,0,1,1,1] (here its written in reverse, first element of array is lsb)
+        #  → unbiased exponent = 15 − bias=0
+        True, True, True, True, False, #exponent, stored as biased
+        False # sign bit = 0 → positive
+        
     ]
-    # this value = 1.1010000101 (binary) × 2⁸ = 1.6298828125 × 256 = 417.25
+    # this value = 1.1010000101 (binary) × 2^0 = 1.6298828125 × 2^0 = 1.6298828125
+    
     #'temporarily changing it to be smaller:
     #fpc represents...
     fpc = [
-        False,                    # sign bit = 0 → positive
-        False, True, False, True, False,
-        # exponent bits [0,1,0,1,0] → biased exponent = 10 → unbiased = -5
-        # implicit leading-1 + mantissa bits:
-        True, True, False, True, False, True, False, False, False, False
         # mantissa (binary): 1.1010100000
+        
+        
+        
+        # implicit leading-1 + mantissa bits:
+        False, False, False, False, False, True, False, True, False, True,
+        False, True, False, True, False, ## exponent bits [0,1,0,1,0] → 
+        #biased exponent = 10 → unbiased = -5
+        False, # sign bit = 0 → positive
+        
     ]
     # this value = 1.1010100000 (binary) × 2^-5 = 1.65625 × 0.03125 = 0.05175781...
         
-    result_fp = bitFPMul16(fpa, fpc)
+    result_fp = bitFPMul16(fpb, fpc)
     print(f"result_fp: {result_fp}")
     #print(f"Binary product: {convertToFloatingPoint(convert_bool_to_binary(result_fp))}")
     print(f"bool to binary: {convert_bool_to_binary(result_fp)}")
     print(f"Human readable product: {convertToString(reverseArray(convert_bool_to_binary(result_fp)))}")
-
+    print(f"Decimal product: {convertFloatBinaryToDecimal(result_fp)}")
 
     #32-bit value: alternating False/True
     subtract1 = [True]*32 #-1

@@ -1385,7 +1385,7 @@ def bitMul11(a_bits, b_bits):
     return product
 
 
-def bitMul11Old(a,b):
+def bitMul11_Old(a,b):
     partialProducts = [[a[i] & b[j] for j in range(11)] for i in range(11)]
     sum2Column = [[False, False] for _ in range(22)]
     #print(partialProducts)

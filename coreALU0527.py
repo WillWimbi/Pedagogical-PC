@@ -3,9 +3,21 @@ current_cycle = 0
 
 BIT_SIZE = 32
 
-# Convert LSB→MSB bool array (unsigned) to decimal
-def convertToDecimalOnlyPositiveUnsigned(r):
+def intToBoolList(value, width=32):
+    """Convert integer to LSB-first boolean list"""
+    return [bool((value >> i) & 1) for i in range(width)]
+def signExtend(bits, targetWidth):
+    """Sign extend boolean list to target width"""
+    if len(bits) >= targetWidth:
+        return bits[:targetWidth]
 
+    signBit = bits[-1] if bits else False
+    result = bits[:]
+    while len(result) < targetWidth:
+        result.append(signBit)
+    return result
+# Convert LSB→MSB bool array (unsigned) to decimal
+def convertToDecimalUnsigned(r):
     final = 0
     lengthM1 = len(r)
     for i in range(lengthM1):
@@ -21,6 +33,10 @@ def convertToDecimal(r):
     if r[lengthM1] == True:
         final -= 2 ** lengthM1
     return final
+
+def boolListToInt(boolList):
+    """Convert LSB-first boolean list to integer"""
+    return convertToDecimalUnsigned(boolList)
 
 # Convert N-bit float (bool array) to decimal (supports 16, 32, 64, etc.)
 def convertFloatBinaryToDecimal(a, exp_bits=None, mantissa_bits=None):
@@ -87,9 +103,6 @@ def convertFloatBinaryToDecimal(a, exp_bits=None, mantissa_bits=None):
 def convert_bool_to_binary(bool_list):
     return [1 if value else 0 for value in bool_list]
 
-# def convert_decimal_to_binary(decimal):
-#     for i in range(32):
-
 #just plain arr-->string
 def convertToString(r):
     final = ""
@@ -113,10 +126,7 @@ def halfAdder(a, b):
     s = a ^ b
     cout = a & b
     return s, cout
-def HA(a,b):
-    s = a ^ b
-    cout = a & b
-    return s, cout
+
 def fullAdder(a, b, c):
     x1 = a ^ b
     s = x1 ^ c
@@ -124,13 +134,10 @@ def fullAdder(a, b, c):
     a2 = c & x1
     cout = a1 | a2
     return s, cout
-def FA(a,b,c):
-    x1 = a ^ b
-    s = x1 ^ c
-    a1 = a & b
-    a2 = c & x1
-    cout = a1 | a2
-    return s, cout
+
+# Aliases for compatibility
+HA = halfAdder
+FA = fullAdder
 
 def NOT(x):
     return not x
@@ -178,11 +185,15 @@ def twoComp(v):                             # two's-complement negate
     one = [True] + [False]*(len(v)-1)
     return bitAdd(inv, one)[0]
 
+def shiftLeftVal(inp,val):
+    return inp[]
+
+
 def shiftLeft(bits, in_bit):                # logical shift-left by 1
     return [in_bit] + bits[:-1]
-# -------------------------------------------------------------------------
+# -------------1------------------------------------------------------------
 
-def _uDiv_nonrestoring(dividend, divisor):
+def uDivNonrestoring(dividend, divisor):
     """Unsigned, non-restoring division (n-bit) → (Q, R)"""
     n   = len(dividend)
     Q   = [False]*n
@@ -220,7 +231,7 @@ def bitDiv(a_bits, b_bits):
     if B.count(True) == 0:
         raise ZeroDivisionError
 
-    Qmag, Rmag = _uDiv_nonrestoring(A, B)
+    Qmag, Rmag = uDivNonrestoring(A, B)
 
     # apply signs
     Q = twoComp(Qmag) if sign_a ^ sign_b else Qmag
@@ -251,7 +262,7 @@ def bitMul(a_bits, b_bits):
     carys = [False]*(2*n)
     for k in range(2*n):
         while len(cols[k]) > 2:
-            s,c = FA(cols[k].pop(), cols[k].pop(), cols[k].pop())
+            s,c = fullAdder(cols[k].pop(), cols[k].pop(), cols[k].pop())
             cols[k].append(s)
             if k < 2*n-1:
                 cols[k+1].append(c)
@@ -262,7 +273,7 @@ def bitMul(a_bits, b_bits):
     P   = [False]*(2*n)
     cin = False
     for k in range(2*n):
-        P[k], cin = FA(sums[k], carys[k], cin)
+        P[k], cin = fullAdder(sums[k], carys[k], cin)
     return P
 
 def bitMulUnsigned(a_bits, b_bits):
@@ -288,7 +299,7 @@ def bitMulUnsigned(a_bits, b_bits):
 
     for k in range(2*n):
         while len(cols[k]) > 2:              # keep height ≤ 2
-            s, c = FA(cols[k].pop(),
+            s, c = fullAdder(cols[k].pop(),
                       cols[k].pop(),
                       cols[k].pop())
             cols[k].append(s)
@@ -302,7 +313,7 @@ def bitMulUnsigned(a_bits, b_bits):
     # --- 3. final ripple-carry adder ---------------------------------------
     product, cin = [False]*(2*n), False
     for k in range(2*n):
-        product[k], cin = FA(sums[k], carys[k], cin)
+        product[k], cin = fullAdder(sums[k], carys[k], cin)
     return product
 
 # def mux(bitInput, bitSelect):
@@ -531,69 +542,39 @@ def mux(a=None, select=None):
     output = OR(*enabled_outputs)
 
     return output
-
-#we interpret lsb as 1st element and msb as last, hence our ordering is 'reversed' from standard.
 class cpu_32:
-    # Register tag mapping based on RISC-V ABI
-    REG_TAGS = {
-        0:  "zero",  1:  "ra",   2:  "sp",   3:  "gp",   4:  "tp",
-        5:  "t0",    6:  "t1",   7:  "t2",
-        8:  "s0",    9:  "s1",
-        10: "a0",   11: "a1",   12: "a2",   13: "a3",   14: "a4",   15: "a5",   16: "a6",   17: "a7",
-        18: "s2",   19: "s3",   20: "s4",   21: "s5",   22: "s6",   23: "s7",   24: "s8",   25: "s9",   26: "s10",  27: "s11",
-        28: "t3",   29: "t4",   30: "t5",   31: "t6"
-    }
-    # Also allow alternate names for s0/fp
-    ALT_TAGS = {
-        "fp": 8
-    }
-
+#we interpret lsb as 1st element and msb as last, hence our ordering is 'reversed' from standard.
     def __init__(self):
-        # Each register is a 32-bit boolean list (LSB-first)
+        # Inherit register system from original cpu_32 class
         self.gRegs = [[False]*32 for _ in range(32)]
-        # Build tag-to-index and index-to-tag mappings
-        self.tag_to_index = {tag: idx for idx, tag in self.REG_TAGS.items()}
-        self.tag_to_index.update(self.ALT_TAGS)
-        self.index_to_tag = {idx: tag for idx, tag in self.REG_TAGS.items()}
-
+        self.memory = bytearray(4096)  # 4KB memory
+        self.pc = 0
+        
+        # Control unit
+        self.controlUnit = ControlUnit()
+        
+        # Register tag mapping (same as original)
+        self.REG_TAGS = {
+            0:  "zero",  1:  "ra",   2:  "sp",   3:  "gp",   4:  "tp",
+            5:  "t0",    6:  "t1",   7:  "t2",
+            8:  "s0",    9:  "s1", 
+            10: "a0",   11: "a1",   12: "a2",   13: "a3",   14: "a4",   15: "a5",   16: "a6",   17: "a7",
+            18: "s2",   19: "s3",   20: "s4",   21: "s5",   22: "s6",   23: "s7",   24: "s8",   25: "s9",   26: "s10",  27: "s11",
+            28: "t3",   29: "t4",   30: "t5",   31: "t6"
+        }
+    
     def getReg(self, key):
-        """
-        Access register by index (0-31) or tag (e.g., 'a0', 'sp', 'fp', etc.)
-        Returns the 32-bit boolean list for the register.
-        """
+        """Get register value (same as original)"""
         if isinstance(key, int):
             if 0 <= key < 32:
                 return self.gRegs[key]
-            else:
-                raise IndexError("Register index out of range (0-31)")
-        elif isinstance(key, str):
-            idx = self.tag_to_index.get(key)
-            if idx is not None:
-                return self.gRegs[idx]
-            else:
-                raise KeyError(f"Unknown register tag: {key}")
-        else:
-            raise TypeError("Register key must be int (0-31) or str (tag)")
-
+        return [False] * 32
+    
     def setReg(self, key, value):
-        """
-        Set register by index or tag. Value should be a 32-bit boolean list.
-        x0 ('zero') is always 0 and cannot be set.
-        """
-        if isinstance(key, int):
-            idx = key
-        elif isinstance(key, str):
-            idx = self.tag_to_index.get(key)
-            if idx is None:
-                raise KeyError(f"Unknown register tag: {key}")
-        else:
-            raise TypeError("Register key must be int (0-31) or str (tag)")
-        if idx == 0:
-            # x0 is always zero
-            return
-        if not (isinstance(value, list) and len(value) == 32):
-            raise ValueError("Register value must be a 32-element boolean list")
-        self.gRegs[idx] = value.copy()
+        """Set register value (same as original)"""
+        if isinstance(key, int) and 0 < key < 32:  # x0 always zero
+            if isinstance(value, list) and len(value) == 32:
+                self.gRegs[key] = value.copy()
 
     def regTag(self, idx):
         """
@@ -602,66 +583,330 @@ class cpu_32:
         return self.index_to_tag.get(idx, f"x{idx}")
 
     # Example: cpu.get_reg('a0'), cpu.get_reg(10), cpu.set_reg('sp', [False]*32)
+    def decode(self, opcodeBits):
+            """Returns dict of instruction type signals"""
+            if len(opcodeBits) != 7:
+                raise ValueError("Opcode must be 7 bits")
+            
+            # Create inverted signals
+            opcodeNot = [NOT(bit) for bit in opcodeBits]
+            b = opcodeBits  # shorthand
+            n = opcodeNot   # shorthand
+            
+            # Gate count: 9 instruction types × 7 gates each = 63 AND gates + 7 NOT gates = 70 gates
+            
+            # R-type: 0110011 → LSB-first: 1100110
+            rType = AND(b[0], b[1], n[2], n[3], b[4], b[5], n[6])
+            
+            # I-type ALU: 0010011 → LSB-first: 1100100
+            iTypeAlu = AND(b[0], b[1], n[2], n[3], b[4], n[5], n[6])
+            
+            # Load: 0000011 → LSB-first: 1100000  
+            load = AND(b[0], b[1], n[2], n[3], n[4], n[5], n[6])
+            
+            # Store: 0100011 → LSB-first: 1100010
+            store = AND(b[0], b[1], n[2], n[3], n[4], b[5], n[6])
+            
+            # Branch: 1100011 → LSB-first: 1100011
+            branch = AND(b[0], b[1], n[2], n[3], n[4], n[5], b[6])
+            
+            # JAL: 1101111 → LSB-first: 1111011
+            jal = AND(b[0], b[1], b[2], b[3], n[4], b[5], b[6])
+            
+            # JALR: 1100111 → LSB-first: 1110011  
+            jalr = AND(b[0], b[1], n[2], b[3], n[4], n[5], b[6])
+            
+            # LUI: 0110111 → LSB-first: 1110110
+            lui = AND(b[0], b[1], n[2], b[3], b[4], b[5], n[6])
+            
+            # AUIPC: 0010111 → LSB-first: 1110100
+            auipc = AND(b[0], b[1], n[2], b[3], n[4], b[5], n[6])
+            
+            return {
+                'rType': rType,
+                'iTypeAlu': iTypeAlu,
+                'load': load, 
+                'store': store,
+                'branch': branch,
+                'jal': jal,
+                'jalr': jalr,
+                'lui': lui,
+                'auipc': auipc
+            }
 
-
-    def regs32Arithmetic(self,inp,sel):
+    def generateAluOp(self, opcodeSignals, funct3Bits, funct7Bits):
+        """Generate 4-bit ALU control signal"""
         
+        # ALU Operations (4-bit encoding):
+        # 0000: ADD, 0001: SUB, 0010: AND, 0011: OR, 0100: XOR
+        # 0101: SLL, 0110: SRL, 0111: SRA, 1000: SLT, 1001: SLTU
+        # 1010-1111: Reserved for MUL/DIV etc.
         
+        f3 = boolListToInt(funct3Bits)
+        f7 = boolListToInt(funct7Bits)
         
-        return mux(inp, sel)
-
-
-    def execute(self,instruction):
-        print('hi')
+        # Default: ADD (for loads, stores, branches address calc)
+        aluOp = [False, False, False, False]  # 0000
         
-        opcode = instruction[:7]
-        func3 = instruction[12:15]
-        rd = instruction[7:12]
-        rs1 = instruction[15:20]
-        rs2 = instruction[20:25]
-        func7 = instruction[25:]
-        immed12 = instruction[21:] #21 thru 31
-        upperImmed = instruction[12:20]
+        # R-type and I-type ALU operations
+        if opcodeSignals['rType'] or opcodeSignals['iTypeAlu']:
+            if f3 == 0:  # ADD/SUB
+                if opcodeSignals['rType'] and f7 == 0x20:  # SUB
+                    aluOp = [True, False, False, False]  # 0001: SUB
+                # else ADD (default 0000)
+            elif f3 == 1:  # SLL
+                aluOp = [True, False, True, False]  # 0101: SLL
+            elif f3 == 2:  # SLT  
+                aluOp = [False, False, False, True]  # 1000: SLT
+            elif f3 == 3:  # SLTU
+                aluOp = [True, False, False, True]  # 1001: SLTU
+            elif f3 == 4:  # XOR
+                aluOp = [False, False, True, False]  # 0100: XOR
+            elif f3 == 5:  # SRL/SRA
+                if f7 == 0x20:  # SRA
+                    aluOp = [True, True, True, False]  # 0111: SRA
+                else:  # SRL
+                    aluOp = [False, True, True, False]  # 0110: SRL
+            elif f3 == 6:  # OR
+                aluOp = [True, True, False, False]  # 0011: OR
+            elif f3 == 7:  # AND
+                aluOp = [False, True, False, False]  # 0010: AND
+        
+        return aluOp
 
-        rs1Dec = convertToDecimal(rs1)
-        rs2Dec = convertToDecimal(rs2)
-        rdDec = convertToDecimal(rd)
-        print('rs1Dec:',rs1Dec)
+    def generateImmediate(self, instrBits, opcodeSignals):
+        """Generate 32-bit immediate based on instruction format"""
+        
+        # Extract raw immediate bits for each format
+        iImm = self.extractIImmediate(instrBits)
+        sImm = self.extractSImmediate(instrBits) 
+        bImm = self.extractBImmediate(instrBits)
+        uImm = self.extractUImmediate(instrBits)
+        jImm = self.extractJImmediate(instrBits)
+        
+        # 5:1 mux to select appropriate immediate format
+        # Mux select logic based on instruction type
+        if opcodeSignals['iTypeAlu'] or opcodeSignals['load'] or opcodeSignals['jalr']:
+            return iImm
+        elif opcodeSignals['store']:
+            return sImm 
+        elif opcodeSignals['branch']:
+            return bImm
+        elif opcodeSignals['lui'] or opcodeSignals['auipc']:
+            return uImm
+        elif opcodeSignals['jal']:
+            return jImm
+        else:
+            return [False] * 32  # Default zero immediate
+    
+    def extractIImmediate(self, instrBits):
+        """I-type: bits[31:20] sign-extended"""
+        immBits = instrBits[20:32]  # bits 31:20
+        return signExtend(immBits, 32)
+    
+    def extractSImmediate(self, instrBits):
+        """S-type: {bits[31:25], bits[11:7]} sign-extended"""
+        immBits = instrBits[7:12] + instrBits[25:32]  # {11:7, 31:25}
+        return signExtend(immBits, 32)
+    
+    def extractBImmediate(self, instrBits):
+        """B-type: {bit[31], bit[7], bits[30:25], bits[11:8], 0} sign-extended"""
+        # Assemble: {bit31, bit7, bits30:25, bits11:8, 0}
+        immBits = ([False] +                           # bit 0 = 0 (branches are 2-byte aligned)
+                  instrBits[8:12] +                    # bits 11:8 → positions 4:1
+                  instrBits[25:31] +                   # bits 30:25 → positions 10:5  
+                  [instrBits[7]] +                     # bit 7 → position 11
+                  [instrBits[31]])                     # bit 31 → position 12 (sign)
+        return signExtend(immBits, 32)
+    
+    def extractUImmediate(self, instrBits):
+        """U-type: bits[31:12] in upper 20 bits, lower 12 bits = 0"""
+        immBits = ([False] * 12 +                     # Lower 12 bits = 0
+                  instrBits[12:32])                    # Upper 20 bits from instruction
+        return immBits
+    
+    def extractJImmediate(self, instrBits):
+        """J-type: {bit[31], bits[19:12], bit[20], bits[30:21], 0} sign-extended"""
+        # Assemble: {bit31, bits19:12, bit20, bits30:21, 0}
+        immBits = ([False] +                           # bit 0 = 0 (jumps are 2-byte aligned)
+                  instrBits[21:31] +                   # bits 30:21 → positions 10:1
+                  [instrBits[20]] +                    # bit 20 → position 11
+                  instrBits[12:20] +                   # bits 19:12 → positions 19:12
+                  [instrBits[31]])                     # bit 31 → position 20 (sign)
+        return signExtend(immBits, 32)
 
-        #register or immediate
-        RegRegOpCode=[True,True,False,False,True,True,False]
-        ImmedOpCode = [True,True,False,False,True,False,False]
-        print('opcode:',opcode)
-        print('RegRegOpCode:',RegRegOpCode)
-        if(opcode==RegRegOpCode):
-            print('hi')
-            if(func3 == [False,False,False] and func7 == [False,False,False,False,False,False,False]):
-                Result, Zero, LessThan, Overflow, CarryOut = self.alu(self.getReg(rs1Dec),self.getReg(rs2Dec),[False,False,False,False]) #reg1,reg2,aluCtrl
-                self.setReg(rdDec,Result)
-                print("Result:",Result)
-                print("getRegisters:",self.getReg(rdDec))
+
+    
+    def executeInstruction(self, instrBits):
+        """Execute single instruction using gate-level control"""
+        
+        # Generate control signals
+        controls = self.controlUnit.generateControlSignals(instrBits)
+        
+        # Read source registers
+        rs1Val = self.getReg(controls['rs1'])
+        rs2Val = self.getReg(controls['rs2'])
+        
+        # ALU operand selection mux (2:1, 32-bit)
+        # Mux gate count: 32 bits × 3 gates/bit = 96 gates
+        aluOpB = mux2to1(rs2Val, controls['immediate'], controls['aluSrc'])
+        
+        # Execute ALU operation
+        aluResult = self._executeAlu(rs1Val, aluOpB, controls['aluOp'])
+        
+        # Memory operations
+        memData = [False] * 32
+        if controls['memRead']:
+            addr = boolListToInt(aluResult)
+            memData = self._loadMemory(addr, controls['funct3'])
+        elif controls['memWrite']:
+            addr = boolListToInt(aluResult)
+            self._storeMemory(addr, rs2Val, controls['funct3'])
+        
+        # Write-back result selection mux (4:1, 32-bit)
+        # Mux gate count: 32 bits × (3+3+1) gates per 4:1 mux = 224 gates
+        pcPlus4 = intToBoolList(self.pc + 4, 32)
+        writeData = mux4to1(aluResult, memData, pcPlus4, controls['immediate'], 
+                           controls['resultSel'])
+        
+        # Write to register file
+        if controls['regWrite']:
+            self.setReg(controls['rd'], writeData)
+        
+        # PC update logic
+        self._updatePc(controls, aluResult, rs1Val, rs2Val)
+        
+        return controls  # Return for debugging
+    
+    def _executeAlu(self, opA, opB, aluOp):
+        """Execute ALU operation based on 4-bit control"""
+        # Import ALU functions from original coreALU0527.py
+        from coreALU0527 import bitAdd, bitSub, AND as bitAND, OR as bitOR
+        
+        opCode = boolListToInt(aluOp)
+        
+        if opCode == 0:    # ADD
+            result, _ = bitAdd(opA, opB, False)
+            return result
+        elif opCode == 1:  # SUB  
+            result, _ = bitSub(opA, opB)
+            return result
+        elif opCode == 2:  # AND
+            return [bitAND(opA[i], opB[i]) for i in range(32)]
+        elif opCode == 3:  # OR
+            return [bitOR(opA[i], opB[i]) for i in range(32)]
+        elif opCode == 4:  # XOR
+            return [AND(OR(opA[i], opB[i]), NOT(AND(opA[i], opB[i]))) for i in range(32)]
+        # Add more ALU operations as needed
+        else:
+            return opA  # Default passthrough
+    
+    def _loadMemory(self, addr, funct3):
+        """Load from memory based on size (funct3)"""
+        if funct3 == 2:  # LW (word)
+            data = int.from_bytes(self.memory[addr:addr+4], 'little')
+            return intToBoolList(data, 32)
+        # Add LB, LH, LBU, LHU support
+        return [False] * 32
+    
+    def _storeMemory(self, addr, data, funct3):
+        """Store to memory based on size (funct3)"""
+        if funct3 == 2:  # SW (word)
+            value = boolListToInt(data)
+            self.memory[addr:addr+4] = value.to_bytes(4, 'little')
+        # Add SB, SH support
+    
+    def _updatePc(self, controls, aluResult, rs1Val, rs2Val):
+        """Update program counter based on control signals"""
+        if controls['jump']:  # JAL
+            offset = boolListToInt(controls['immediate'])
+            self.pc = (self.pc + offset) & 0xFFFFFFFF
+        elif controls['jumpReg']:  # JALR
+            target = boolListToInt(aluResult) & 0xFFFFFFFE  # Clear LSB
+            self.pc = target
+        elif controls['branch']:
+            # Evaluate branch condition based on funct3
+            taken = self._evaluateBranch(rs1Val, rs2Val, controls['funct3'])
+            if taken:
+                offset = boolListToInt(controls['immediate'])
+                self.pc = (self.pc + offset) & 0xFFFFFFFF
+            else:
+                self.pc = (self.pc + 4) & 0xFFFFFFFF
+        else:
+            self.pc = (self.pc + 4) & 0xFFFFFFFF
+    
+    def _evaluateBranch(self, rs1Val, rs2Val, funct3):
+        """Evaluate branch condition"""
+        rs1Int = boolListToInt(rs1Val)
+        rs2Int = boolListToInt(rs2Val)
+        
+        if funct3 == 0:    # BEQ
+            return rs1Int == rs2Int
+        elif funct3 == 1:  # BNE
+            return rs1Int != rs2Int
+        elif funct3 == 4:  # BLT (signed)
+            return rs1Int < rs2Int  # Simplified - needs proper signed comparison
+        elif funct3 == 5:  # BGE (signed)
+            return rs1Int >= rs2Int
+        elif funct3 == 6:  # BLTU (unsigned)
+            return rs1Int < rs2Int
+        elif funct3 == 7:  # BGEU (unsigned)  
+            return rs1Int >= rs2Int
+        return False
+
+    # def controlUnit(self,instruction):
+    #     print('hi')
+        
+    #     opcode = instruction[:7]
+    #     func3 = instruction[12:15]
+    #     rd = instruction[7:12]
+    #     rs1 = instruction[15:20]
+    #     rs2 = instruction[20:25]
+    #     func7 = instruction[25:]
+    #     immed12 = instruction[21:] #21 thru 31
+    #     upperImmed = instruction[12:20]
+
+    #     rs1Dec = convertToDecimal(rs1)
+    #     rs2Dec = convertToDecimal(rs2)
+    #     rdDec = convertToDecimal(rd)
+    #     print('rs1Dec:',rs1Dec)
+
+    #     #register or immediate
+    #     RegRegOpCode=[True,True,False,False,True,True,False]
+    #     ImmedOpCode = [True,True,False,False,True,False,False]
+    #     print('opcode:',opcode)
+    #     print('RegRegOpCode:',RegRegOpCode)
+    #     if(opcode==RegRegOpCode):
+    #         print('hi')
+    #         if(func3 == [False,False,False] and func7 == [False,False,False,False,False,False,False]):
+    #             Result, Zero, LessThan, Overflow, CarryOut = self.alu(self.getReg(rs1Dec),self.getReg(rs2Dec),[False,False,False,False]) #reg1,reg2,aluCtrl
+    #             self.setReg(rdDec,Result)
+    #             print("Result:",Result)
+    #             print("getRegisters:",self.getReg(rdDec))
 
             
-            #func7 = instruction[25:]
+    #         #func7 = instruction[25:]
 
 
-        # #Immediate
-        # if(opcode==ImmedOpCode):
+    #     #Immediate
+    #     if(opcode==ImmedOpCode):
+    #         pass  # TODO: implement immediate operations
 
-        # #store
-        # if(opcode==[True,  True,  False, False, False, True,  False]):
+    #     #store
+    #     if(opcode==[True,  True,  False, False, False, True,  False]):
+    #         pass  # TODO: implement store operations
 
+    #     #branch
+    #     if(opcode==[True,  True,  False, False, False, True,  True ]):
+    #         pass  # TODO: implement branch operations
 
-        
-        # #branch
-        # if(opcode==[True,  True,  False, False, False, True,  True ]):
+    #     #upper immediate
+    #     if(opcode==[True,True,False,False,False,False,False]):
+    #         pass  # TODO: implement upper immediate operations
 
-        # #upper immediate
-        # if(opcode==[True,True,False,False,False,False,False]):
-            
-
-        # #jump
-        # if(opcode==[True,  True,  True,  True,  False, True,  True ]):
+    #     #jump
+    #     if(opcode==[True,  True,  True,  True,  False, True,  True ]):
+    #         pass  # TODO: implement jump operations
 
     def alu(self, a,b,ctrl):
 
@@ -676,6 +921,17 @@ class cpu_32:
         return Result, Zero, LessThan, Overflow, CarryOut
 
 
+# # #32bit shifter
+def rTypeShift(a, val):
+    if(val>0):
+        append = a[:val]
+        r=shiftLeft(a, val)
+        return append + r
+    else:
+        
+        append = a[len(a):len(a)-val]
+        r=shiftLeft(a, val)
+        return r + append
 
 
 
@@ -710,7 +966,11 @@ def testCPU32():
     cpu.setReg(4,[False]*2 + [True]*2 + [False]*28)
     cpu.setReg(5,[False]*2 + [True]*2 + [False]*28)
     print('cpu.getReg(0):',cpu.getReg(0))
-    cpu.execute(add_x3_x1_x2)
+    cpu.controlUnit(add_x3_x1_x2)
+
+
+    print("pos; shift left",bitShifterArthRotate32(add_x3_x1_x2,2))
+    print("neg; shift right",bitShifterArthRotate32(add_x3_x1_x2,-2))
 testCPU32()
 
 
@@ -726,8 +986,7 @@ testCPU32()
 
 
 
-# # #32bit shifter
-# def bitShifter32():
+
 
 # def bitAND32(a, b):
 
@@ -791,12 +1050,12 @@ def testTwoNums():
     print(f"multt3: {multt3}")
     print(f"multt4: {multt4}")
     #960*64=61440
-    print(f"multt1 (decimal): {convertToDecimalOnlyPositiveUnsigned(convert_bool_to_binary(multt1))}")
-    print(f"multt2 (decimal): {convertToDecimalOnlyPositiveUnsigned(convert_bool_to_binary(multt2))}")
+    print(f"multt1 (decimal): {convertToDecimalUnsigned(convert_bool_to_binary(multt1))}")
+    print(f"multt2 (decimal): {convertToDecimalUnsigned(convert_bool_to_binary(multt2))}")
     #calculate2
     result_mult = bitMulUnsigned(multt1, multt2)
     print(f"result_mult: {result_mult}")
-    print(f"Binary product: {convertToDecimalOnlyPositiveUnsigned(convert_bool_to_binary(result_mult))}")
+    print(f"Binary product: {convertToDecimalUnsigned(convert_bool_to_binary(result_mult))}")
     print(f"bool to binary: {convert_bool_to_binary(result_mult)}")
     print(f"Human readable product: {convertToString(reverseArray(convert_bool_to_binary(result_mult)))}")
     

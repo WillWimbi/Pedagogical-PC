@@ -1674,7 +1674,7 @@ def bitFPMul16(a, b):
     signBit = a[15] ^ b[15]
     #a and b are 16bit floats
     #negate. We use -15? [True,False,False,False,True] (msb is last array index)
-    bitNeg15 = [True,False,False,False,True] 
+    bitNeg15 = [True,False,False,False,True]
     bitPos15 = [True,True,True,True,False]
     print(f"a: {a}")
     print(f"b: {b}")

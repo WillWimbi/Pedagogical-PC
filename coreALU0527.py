@@ -179,17 +179,42 @@ def bitSub(a, b):
 
 # =====  tiny primitives  ==================================================
 
-
 def twoComp(v):                             # two's-complement negate
     inv = [not b for b in v]
     one = [True] + [False]*(len(v)-1)
     return bitAdd(inv, one)[0]
 
-def shiftLeftVal(inp,val):
-    return inp[]
+def shiftLeft(inp,val):
+    
+    if(val>0):
+        val %= len(inp)
+        return [False]*val+inp[:-val]
+    else:
+        val = abs(val) % len(inp)  # Take absolute value first
+        return inp[val:] + [False]*val
+def testShiftLeft():
+    # Test shifting left by 2 (should move bits toward higher indices, i.e., LSB-first: pad at start)
+    bits = [True, False, True, False, False, False, False, False]
+    shifted = shiftLeft(bits, 2)
+    # In LSB-first, shifting left by 2: [T,F,T,F,F,F,F,F] -> [F,F,T,F,T,F,F,F]
+    assert shifted == [False, False, True, False, True, False, False, False], f"Failed left shift: {shifted}"
 
+    # Test shifting right by 2 (val negative, should move bits toward lower indices, pad at end)
+    bits = [True, True, False, False, False, False, False, False]
+    shifted = shiftLeft(bits, -2)
+    # In LSB-first, shifting right by 2: [T,T,F,F,F,F,F,F] -> [F,F,F,F,F,F,T,T]
+    assert shifted == [False, False, False, False, False, False, False, False], f"Failed right shift: {shifted}"
 
-def shiftLeft(bits, in_bit):                # logical shift-left by 1
+    # Test shifting by 0 (no change)
+    bits = [True, False, False, True]
+    shifted = shiftLeft(bits, 0)
+    assert shifted == bits, f"Failed zero shift: {shifted}"
+
+    print("testShiftLeft passed.")
+
+testShiftLeft()
+
+def oldShiftLeft(bits, in_bit):                # logical shift-left by 1
     return [in_bit] + bits[:-1]
 # -------------1------------------------------------------------------------
 
@@ -201,7 +226,7 @@ def uDivNonrestoring(dividend, divisor):
     D   = divisor + [False]        # align width
 
     for i in range(n-1, -1, -1):   # MSB → LSB
-        R = shiftLeft(R, dividend[i])
+        R = oldShiftLeft(R, dividend[i])
 
         if not R[-1]:              # R ≥ 0 → subtract
             R, _ = bitSub(R, D)
@@ -316,73 +341,6 @@ def bitMulUnsigned(a_bits, b_bits):
         product[k], cin = fullAdder(sums[k], carys[k], cin)
     return product
 
-# def mux(bitInput, bitSelect):
-
-
-
-# def 5to32Decoder(bit5Input):
-    #mux internals simply are:
-    #n select bit lines and n inverted select bit lines and 2^n input bit lines both feed into
-    #2^n n+1 input AND gates which feed into a 2^n input OR gate
-MEMORY_SIZE=131072
-memory=[False]*32*MEMORY_SIZE
-
-rdReg = [False]*32
-rs1Reg = [False]*32
-rs2Reg = [False]*32
-
-# class Register32:
-
-def slice_instruction(instr_bits):
-    """Extract all possible fields from 32-bit instruction"""
-    return {
-        'opcode': instr_bits[0:7],      # bits 6:0
-        'rd':     instr_bits[7:12],     # bits 11:7  
-        'funct3': instr_bits[12:15],    # bits 14:12
-        'rs1':    instr_bits[15:20],    # bits 19:15
-        'rs2':    instr_bits[20:25],    # bits 24:20
-        'funct7': instr_bits[25:32],    # bits 31:25
-    }
-
-#want to be able to handle load, store, and add for now in RISC style.
-
-
-#
-def decoding(sliced_instructs):
-    global rdReg, rs1Reg, rs2Reg
-    if(sliced_instructs['opcode'] == '0110011'[::-1]):
-        if(sliced_instructs['funct3'] == '000'):
-            if(sliced_instructs['funct7'] == '0000000'):
-                #add regs 1 & 2  into rd.   
-                rdReg = ALU32(rs1Reg, rs2Reg, 'add')
-                print("output of add part of ALU32:",)
-    elif(sliced_instructs['opcode'] == '0000011'[::-1]):
-        if(sliced_instructs['funct3'] == '010'):
-            #lw rd, offset(targetMemAddr) --> rd = memory[targetMemAddr+offset]
-            #load word from memory into rd.   
-            print("hi!")
-            # if(sliced_instructs['rd'] == '11110'):
-            #     rs1Reg = memory[bits_to_int(sliced_instructs['rs1']+sliced_instructs['funct7']+sliced_instructs['rs2'])]
-            # elif(sliced_instructs['rd'] == '11111'):
-            temp = bits_to_int(sliced_instructs['rs1']+sliced_instructs['funct7']+sliced_instructs['rs2'])
-            #deal with 11111 later
-            print("temp:",temp)
-            rs2Reg = memory[temp:temp+32]
-            
-# def decoder(insInp):
-#     insInp[]
-
-#5-->32 decoder 
-
-def ALU32(a,b,instruction):
-    if(instruction == 'add'):
-        return bitAdd(a,b,False)[0]
-    
-
-
-# def FPU32(bit32Input):
-
-
 # ───── helpers ────────────────────────────────────────────────────────────
 def int_to_bits(val, n=32):
     return [(val >> i) & 1 == 1 for i in range(n)]
@@ -470,42 +428,6 @@ def mux(a=None, select=None):
     num_select_bits = len(select)
     # Basic gate implementations
 
-    # ----------------------
-    # Parameter resolution logic
-    if num_select_bits is None and num_inputs is None:
-        # Default to 4:16 MUX
-        num_select_bits = 4
-        num_inputs = 16
-    elif num_select_bits is not None and num_inputs is None:
-        # Calculate inputs from select bits
-        num_inputs = 2 ** num_select_bits
-    elif num_select_bits is None and num_inputs is not None:
-        # Calculate select bits from inputs
-        import math
-        num_select_bits = int(math.log2(num_inputs))
-        if 2 ** num_select_bits != num_inputs:
-            raise ValueError(f"num_inputs ({num_inputs}) must be a power of 2")
-    else:
-        # Both specified - verify consistency
-        expected_inputs = 2 ** num_select_bits
-        if num_inputs != expected_inputs:
-            print(f"Warning: num_inputs ({num_inputs}) != 2^num_select_bits ({expected_inputs})")
-            print(f"Using num_select_bits={num_select_bits}, setting num_inputs={expected_inputs}")
-            num_inputs = expected_inputs
-    
-    # Generate default inputs if not provided
-    if a is None:
-        a = [i % 2 == 0 for i in range(num_inputs)]  # Alternating pattern
-    elif len(a) != num_inputs:
-        raise ValueError(f"Input array length ({len(a)}) must equal num_inputs ({num_inputs})")
-    
-    # Generate default select if not provided  
-    if select is None:
-        select = [False] * num_select_bits  # All zeros - selects input 0
-    elif len(select) != num_select_bits:
-        raise ValueError(f"Select array length ({len(select)}) must equal num_select_bits ({num_select_bits})")
-    # ----------------------
-
 
     # Edge case: single input (0 select bits)
     if num_select_bits == 0:
@@ -542,98 +464,153 @@ def mux(a=None, select=None):
     output = OR(*enabled_outputs)
 
     return output
-class cpu_32:
-#we interpret lsb as 1st element and msb as last, hence our ordering is 'reversed' from standard.
-    def __init__(self):
-        # Inherit register system from original cpu_32 class
-        self.gRegs = [[False]*32 for _ in range(32)]
-        self.memory = bytearray(4096)  # 4KB memory
-        self.pc = 0
-        
-        # Control unit
-        self.controlUnit = ControlUnit()
-        
-        # Register tag mapping (same as original)
-        self.REG_TAGS = {
-            0:  "zero",  1:  "ra",   2:  "sp",   3:  "gp",   4:  "tp",
-            5:  "t0",    6:  "t1",   7:  "t2",
-            8:  "s0",    9:  "s1", 
-            10: "a0",   11: "a1",   12: "a2",   13: "a3",   14: "a4",   15: "a5",   16: "a6",   17: "a7",
-            18: "s2",   19: "s3",   20: "s4",   21: "s5",   22: "s6",   23: "s7",   24: "s8",   25: "s9",   26: "s10",  27: "s11",
-            28: "t3",   29: "t4",   30: "t5",   31: "t6"
-        }
-    
-    def getReg(self, key):
-        """Get register value (same as original)"""
-        if isinstance(key, int):
-            if 0 <= key < 32:
-                return self.gRegs[key]
-        return [False] * 32
-    
-    def setReg(self, key, value):
-        """Set register value (same as original)"""
-        if isinstance(key, int) and 0 < key < 32:  # x0 always zero
-            if isinstance(value, list) and len(value) == 32:
-                self.gRegs[key] = value.copy()
+"""
+Complete Gate-Level RISC-V Control Unit for PySimPC
+Handles all 40+ RISC-V instructions using explicit decoders, muxes, and gates
+Compatible with existing cpu_32 class and boolean list format (LSB-first)
+"""
 
-    def regTag(self, idx):
-        """
-        Get the canonical tag name for a register index.
-        """
-        return self.index_to_tag.get(idx, f"x{idx}")
+def AND(*inputs):
+    if not inputs:
+        return True
+    result = True
+    for inp in inputs:
+        result = result and inp
+    return result
 
-    # Example: cpu.get_reg('a0'), cpu.get_reg(10), cpu.set_reg('sp', [False]*32)
+def OR(*inputs):
+    if not inputs:
+        return False
+    result = False
+    for inp in inputs:
+        result = result or inp
+    return result
+
+def NOT(x):
+    return not x
+
+def mux2to1(input0, input1, select):
+    """2:1 mux using gates - returns list same width as inputs"""
+    if len(input0) != len(input1):
+        raise ValueError("Inputs must be same width")
+    
+    result = []
+    selectNot = NOT(select)
+    
+    for i in range(len(input0)):
+        # output = (input0 & ~select) | (input1 & select)
+        term0 = AND(input0[i], selectNot)
+        term1 = AND(input1[i], select)
+        result.append(OR(term0, term1))
+    
+    return result
+
+def mux4to1(input0, input1, input2, input3, select):
+    """4:1 mux using cascaded 2:1 muxes"""
+    if len(select) != 2:
+        raise ValueError("Select must be 2 bits for 4:1 mux")
+    
+    # First level: select between pairs
+    mux01 = mux2to1(input0, input1, select[0])
+    mux23 = mux2to1(input2, input3, select[0])
+    
+    # Second level: select between first level results  
+    return mux2to1(mux01, mux23, select[1])
+
+def mux8to1(inputs, select):
+    """8:1 mux using cascaded structure"""
+    if len(inputs) != 8 or len(select) != 3:
+        raise ValueError("Need 8 inputs and 3 select bits")
+    
+    # First level: 4 × 2:1 muxes
+    mux01 = mux2to1(inputs[0], inputs[1], select[0])
+    mux23 = mux2to1(inputs[2], inputs[3], select[0])
+    mux45 = mux2to1(inputs[4], inputs[5], select[0])
+    mux67 = mux2to1(inputs[6], inputs[7], select[0])
+    
+    # Second level: 2 × 2:1 muxes
+    mux0123 = mux2to1(mux01, mux23, select[1])
+    mux4567 = mux2to1(mux45, mux67, select[1])
+    
+    # Third level: final 2:1 mux
+    return mux2to1(mux0123, mux4567, select[2])
+
+def boolListToInt(bits):
+    """Convert LSB-first boolean list to integer"""
+    return sum((1 << i) if bit else 0 for i, bit in enumerate(bits))
+
+def intToBoolList(value, width=32):
+    """Convert integer to LSB-first boolean list"""
+    return [bool((value >> i) & 1) for i in range(width)]
+
+def signExtend(bits, targetWidth):
+    """Sign extend boolean list to target width"""
+    if len(bits) >= targetWidth:
+        return bits[:targetWidth]
+    
+    signBit = bits[-1] if bits else False
+    result = bits[:]
+    while len(result) < targetWidth:
+        result.append(signBit)
+    return result
+
+class OpcodeDecoder:
+    """7-bit to 9-output decoder for main instruction types"""
+    
     def decode(self, opcodeBits):
-            """Returns dict of instruction type signals"""
-            if len(opcodeBits) != 7:
-                raise ValueError("Opcode must be 7 bits")
-            
-            # Create inverted signals
-            opcodeNot = [NOT(bit) for bit in opcodeBits]
-            b = opcodeBits  # shorthand
-            n = opcodeNot   # shorthand
-            
-            # Gate count: 9 instruction types × 7 gates each = 63 AND gates + 7 NOT gates = 70 gates
-            
-            # R-type: 0110011 → LSB-first: 1100110
-            rType = AND(b[0], b[1], n[2], n[3], b[4], b[5], n[6])
-            
-            # I-type ALU: 0010011 → LSB-first: 1100100
-            iTypeAlu = AND(b[0], b[1], n[2], n[3], b[4], n[5], n[6])
-            
-            # Load: 0000011 → LSB-first: 1100000  
-            load = AND(b[0], b[1], n[2], n[3], n[4], n[5], n[6])
-            
-            # Store: 0100011 → LSB-first: 1100010
-            store = AND(b[0], b[1], n[2], n[3], n[4], b[5], n[6])
-            
-            # Branch: 1100011 → LSB-first: 1100011
-            branch = AND(b[0], b[1], n[2], n[3], n[4], n[5], b[6])
-            
-            # JAL: 1101111 → LSB-first: 1111011
-            jal = AND(b[0], b[1], b[2], b[3], n[4], b[5], b[6])
-            
-            # JALR: 1100111 → LSB-first: 1110011  
-            jalr = AND(b[0], b[1], n[2], b[3], n[4], n[5], b[6])
-            
-            # LUI: 0110111 → LSB-first: 1110110
-            lui = AND(b[0], b[1], n[2], b[3], b[4], b[5], n[6])
-            
-            # AUIPC: 0010111 → LSB-first: 1110100
-            auipc = AND(b[0], b[1], n[2], b[3], n[4], b[5], n[6])
-            
-            return {
-                'rType': rType,
-                'iTypeAlu': iTypeAlu,
-                'load': load, 
-                'store': store,
-                'branch': branch,
-                'jal': jal,
-                'jalr': jalr,
-                'lui': lui,
-                'auipc': auipc
-            }
+        """Returns dict of instruction type signals"""
+        if len(opcodeBits) != 7:
+            raise ValueError("Opcode must be 7 bits")
+        
+        # Create inverted signals
+        opcodeNot = [NOT(bit) for bit in opcodeBits]
+        b = opcodeBits  # shorthand
+        n = opcodeNot   # shorthand
+        
+        # Gate count: 9 instruction types × 7 gates each = 63 AND gates + 7 NOT gates = 70 gates
+        
+        # R-type: 0110011 → LSB-first: 1100110
+        rType = AND(b[0], b[1], n[2], n[3], b[4], b[5], n[6])
+        
+        # I-type ALU: 0010011 → LSB-first: 1100100
+        iTypeAlu = AND(b[0], b[1], n[2], n[3], b[4], n[5], n[6])
+        
+        # Load: 0000011 → LSB-first: 1100000  
+        load = AND(b[0], b[1], n[2], n[3], n[4], n[5], n[6])
+        
+        # Store: 0100011 → LSB-first: 1100010
+        store = AND(b[0], b[1], n[2], n[3], n[4], b[5], n[6])
+        
+        # Branch: 1100011 → LSB-first: 1100011
+        branch = AND(b[0], b[1], n[2], n[3], n[4], n[5], b[6])
+        
+        # JAL: 1101111 → LSB-first: 1111011
+        jal = AND(b[0], b[1], b[2], b[3], n[4], b[5], b[6])
+        
+        # JALR: 1100111 → LSB-first: 1110011  
+        jalr = AND(b[0], b[1], n[2], b[3], n[4], n[5], b[6])
+        
+        # LUI: 0110111 → LSB-first: 1110110
+        lui = AND(b[0], b[1], n[2], b[3], b[4], b[5], n[6])
+        
+        # AUIPC: 0010111 → LSB-first: 1110100
+        auipc = AND(b[0], b[1], n[2], b[3], n[4], b[5], n[6])
+        
+        return {
+            'rType': rType,
+            'iTypeAlu': iTypeAlu,
+            'load': load, 
+            'store': store,
+            'branch': branch,
+            'jal': jal,
+            'jalr': jalr,
+            'lui': lui,
+            'auipc': auipc
+        }
 
+class AluControl:
+    """ALU operation decoder - funct3/funct7 → 4-bit ALU control"""
+    
     def generateAluOp(self, opcodeSignals, funct3Bits, funct7Bits):
         """Generate 4-bit ALU control signal"""
         
@@ -674,6 +651,9 @@ class cpu_32:
         
         return aluOp
 
+class ImmediateGenerator:
+    """Extract and format immediates for each instruction type"""
+    
     def generateImmediate(self, instrBits, opcodeSignals):
         """Generate 32-bit immediate based on instruction format"""
         
@@ -735,7 +715,114 @@ class cpu_32:
                   [instrBits[31]])                     # bit 31 → position 20 (sign)
         return signExtend(immBits, 32)
 
+class ControlUnit:
+    """Main control unit - generates all control signals"""
+    
+    def __init__(self):
+        self.opcodeDecoder = OpcodeDecoder()
+        self.aluControl = AluControl()
+        self.immGenerator = ImmediateGenerator()
+    
+    def generateControlSignals(self, instrBits):
+        """Generate all control signals from 32-bit instruction"""
+        
+        # Extract instruction fields
+        opcodeBits = instrBits[0:7]
+        rd = instrBits[7:12]
+        funct3 = instrBits[12:15]
+        rs1 = instrBits[15:20]
+        rs2 = instrBits[20:25]
+        funct7 = instrBits[25:32]
+        
+        # Decode instruction type
+        opcodeSignals = self.opcodeDecoder.decode(opcodeBits)
+        
+        # Generate control signals using gate logic
+        controls = {}
+        
+        # RegWrite: Enable register file write (all except stores and branches)
+        # Gate count: 1 OR gate with 7 inputs
+        controls['regWrite'] = OR(opcodeSignals['rType'], opcodeSignals['iTypeAlu'],
+                                 opcodeSignals['load'], opcodeSignals['jal'], 
+                                 opcodeSignals['jalr'], opcodeSignals['lui'],
+                                 opcodeSignals['auipc'])
+        
+        # ALUSrc: Use immediate instead of rs2 (I-type, loads, stores, JALR)
+        # Gate count: 1 OR gate with 4 inputs  
+        controls['aluSrc'] = OR(opcodeSignals['iTypeAlu'], opcodeSignals['load'],
+                               opcodeSignals['store'], opcodeSignals['jalr'])
+        
+        # MemRead: Read from data memory (loads only)
+        controls['memRead'] = opcodeSignals['load']
+        
+        # MemWrite: Write to data memory (stores only)
+        controls['memWrite'] = opcodeSignals['store']
+        
+        # Branch: This instruction is a branch
+        controls['branch'] = opcodeSignals['branch']
+        
+        # Jump: Unconditional jump (JAL)
+        controls['jump'] = opcodeSignals['jal']
+        
+        # JumpReg: Jump using register (JALR)
+        controls['jumpReg'] = opcodeSignals['jalr']
+        
+        # ResultSel: 2-bit control for 4:1 write-back mux
+        # 00: ALU result, 01: Memory data, 10: PC+4, 11: Upper immediate
+        resultSel0 = opcodeSignals['load']  # Memory for loads
+        resultSel1 = OR(opcodeSignals['jal'], opcodeSignals['jalr'])  # PC+4 for jumps  
+        controls['resultSel'] = [resultSel0, resultSel1]
+        
+        # ALU operation control
+        controls['aluOp'] = self.aluControl.generateAluOp(opcodeSignals, funct3, funct7)
+        
+        # Generated immediate value
+        controls['immediate'] = self.immGenerator.generateImmediate(instrBits, opcodeSignals)
+        
+        # Register addresses (converted to integers for compatibility)
+        controls['rd'] = boolListToInt(rd)
+        controls['rs1'] = boolListToInt(rs1) 
+        controls['rs2'] = boolListToInt(rs2)
+        
 
+        controls['funct3'] = boolListToInt(funct3)  # For branch conditions, load/store size
+        
+        return controls
+
+class EnhancedCpu32:
+    """Enhanced CPU with complete gate-level control unit"""
+    
+    def __init__(self):
+        # Inherit register system from original cpu_32 class
+        self.gRegs = [[False]*32 for _ in range(32)]
+        self.memory = bytearray(4096)  # 4KB memory
+        self.pc = 0
+        
+        # Control unit
+        self.controlUnit = ControlUnit()
+        
+        # Register tag mapping (same as original)
+        self.REG_TAGS = {
+            0:  "zero",  1:  "ra",   2:  "sp",   3:  "gp",   4:  "tp",
+            5:  "t0",    6:  "t1",   7:  "t2",
+            8:  "s0",    9:  "s1", 
+            10: "a0",   11: "a1",   12: "a2",   13: "a3",   14: "a4",   15: "a5",   16: "a6",   17: "a7",
+            18: "s2",   19: "s3",   20: "s4",   21: "s5",   22: "s6",   23: "s7",   24: "s8",   25: "s9",   26: "s10",  27: "s11",
+            28: "t3",   29: "t4",   30: "t5",   31: "t6"
+        }
+    
+    def getReg(self, key):
+        """Get register value (same as original)"""
+        if isinstance(key, int):
+            if 0 <= key < 32:
+                return self.gRegs[key]
+        return [False] * 32
+    
+    def setReg(self, key, value):
+        """Set register value (same as original)"""
+        if isinstance(key, int) and 0 < key < 32:  # x0 always zero
+            if isinstance(value, list) and len(value) == 32:
+                self.gRegs[key] = value.copy()
     
     def executeInstruction(self, instrBits):
         """Execute single instruction using gate-level control"""
@@ -752,16 +839,16 @@ class cpu_32:
         aluOpB = mux2to1(rs2Val, controls['immediate'], controls['aluSrc'])
         
         # Execute ALU operation
-        aluResult = self._executeAlu(rs1Val, aluOpB, controls['aluOp'])
+        aluResult = self.executeAlu(rs1Val, aluOpB, controls['aluOp'])
         
         # Memory operations
         memData = [False] * 32
         if controls['memRead']:
             addr = boolListToInt(aluResult)
-            memData = self._loadMemory(addr, controls['funct3'])
+            memData = self.loadMemory(addr, controls['funct3'])
         elif controls['memWrite']:
             addr = boolListToInt(aluResult)
-            self._storeMemory(addr, rs2Val, controls['funct3'])
+            self.storeMemory(addr, rs2Val, controls['funct3'])
         
         # Write-back result selection mux (4:1, 32-bit)
         # Mux gate count: 32 bits × (3+3+1) gates per 4:1 mux = 224 gates
@@ -774,15 +861,12 @@ class cpu_32:
             self.setReg(controls['rd'], writeData)
         
         # PC update logic
-        self._updatePc(controls, aluResult, rs1Val, rs2Val)
+        self.updatePc(controls, aluResult, rs1Val, rs2Val)
         
         return controls  # Return for debugging
     
-    def _executeAlu(self, opA, opB, aluOp):
+    def executeAlu(self, opA, opB, aluOp):
         """Execute ALU operation based on 4-bit control"""
-        # Import ALU functions from original coreALU0527.py
-        from coreALU0527 import bitAdd, bitSub, AND as bitAND, OR as bitOR
-        
         opCode = boolListToInt(aluOp)
         
         if opCode == 0:    # ADD
@@ -792,16 +876,16 @@ class cpu_32:
             result, _ = bitSub(opA, opB)
             return result
         elif opCode == 2:  # AND
-            return [bitAND(opA[i], opB[i]) for i in range(32)]
+            return [AND(opA[i], opB[i]) for i in range(32)]
         elif opCode == 3:  # OR
-            return [bitOR(opA[i], opB[i]) for i in range(32)]
+            return [OR(opA[i], opB[i]) for i in range(32)]
         elif opCode == 4:  # XOR
             return [AND(OR(opA[i], opB[i]), NOT(AND(opA[i], opB[i]))) for i in range(32)]
         # Add more ALU operations as needed
         else:
             return opA  # Default passthrough
     
-    def _loadMemory(self, addr, funct3):
+    def loadMemory(self, addr, funct3):
         """Load from memory based on size (funct3)"""
         if funct3 == 2:  # LW (word)
             data = int.from_bytes(self.memory[addr:addr+4], 'little')
@@ -809,14 +893,19 @@ class cpu_32:
         # Add LB, LH, LBU, LHU support
         return [False] * 32
     
-    def _storeMemory(self, addr, data, funct3):
+    def storeMemory(self, addr, data, funct3):
         """Store to memory based on size (funct3)"""
         if funct3 == 2:  # SW (word)
             value = boolListToInt(data)
+            # Store a 32-bit (4-byte) word into memory at the specified address.
+            # 'value' is an integer converted from the boolean list 'data'.
+            # 'to_bytes(4, "little")' converts the integer to 4 bytes in little-endian order,
+            # which matches RISC-V's memory layout. The memory slice assignment writes these
+            # 4 bytes into the memory array at positions addr, addr+1, addr+2, and addr+3.
             self.memory[addr:addr+4] = value.to_bytes(4, 'little')
         # Add SB, SH support
     
-    def _updatePc(self, controls, aluResult, rs1Val, rs2Val):
+    def updatePc(self, controls, aluResult, rs1Val, rs2Val):
         """Update program counter based on control signals"""
         if controls['jump']:  # JAL
             offset = boolListToInt(controls['immediate'])
@@ -826,7 +915,7 @@ class cpu_32:
             self.pc = target
         elif controls['branch']:
             # Evaluate branch condition based on funct3
-            taken = self._evaluateBranch(rs1Val, rs2Val, controls['funct3'])
+            taken = self.evaluateBranch(rs1Val, rs2Val, controls['funct3'])
             if taken:
                 offset = boolListToInt(controls['immediate'])
                 self.pc = (self.pc + offset) & 0xFFFFFFFF
@@ -835,7 +924,7 @@ class cpu_32:
         else:
             self.pc = (self.pc + 4) & 0xFFFFFFFF
     
-    def _evaluateBranch(self, rs1Val, rs2Val, funct3):
+    def evaluateBranch(self, rs1Val, rs2Val, funct3):
         """Evaluate branch condition"""
         rs1Int = boolListToInt(rs1Val)
         rs2Int = boolListToInt(rs2Val)
@@ -854,72 +943,52 @@ class cpu_32:
             return rs1Int >= rs2Int
         return False
 
-    # def controlUnit(self,instruction):
-    #     print('hi')
-        
-    #     opcode = instruction[:7]
-    #     func3 = instruction[12:15]
-    #     rd = instruction[7:12]
-    #     rs1 = instruction[15:20]
-    #     rs2 = instruction[20:25]
-    #     func7 = instruction[25:]
-    #     immed12 = instruction[21:] #21 thru 31
-    #     upperImmed = instruction[12:20]
+# Gate count summary:
+# - Opcode decoder: 70 gates
+# - Control logic OR gates: ~15 gates  
+# - ALU source mux (2:1, 32-bit): 96 gates
+# - Write-back mux (4:1, 32-bit): 224 gates
+# - PC mux (3:1, 32-bit): 192 gates
+# - Immediate format mux (5:1, 32-bit): 480 gates
+# - ALU operation decode: ~50 gates
+# TOTAL: ~1127 gates for complete control unit
 
-    #     rs1Dec = convertToDecimal(rs1)
-    #     rs2Dec = convertToDecimal(rs2)
-    #     rdDec = convertToDecimal(rd)
-    #     print('rs1Dec:',rs1Dec)
+def testCompleteControl():
+    """Test the complete control unit with various instructions"""
+    
+    cpu = EnhancedCpu32()
 
-    #     #register or immediate
-    #     RegRegOpCode=[True,True,False,False,True,True,False]
-    #     ImmedOpCode = [True,True,False,False,True,False,False]
-    #     print('opcode:',opcode)
-    #     print('RegRegOpCode:',RegRegOpCode)
-    #     if(opcode==RegRegOpCode):
-    #         print('hi')
-    #         if(func3 == [False,False,False] and func7 == [False,False,False,False,False,False,False]):
-    #             Result, Zero, LessThan, Overflow, CarryOut = self.alu(self.getReg(rs1Dec),self.getReg(rs2Dec),[False,False,False,False]) #reg1,reg2,aluCtrl
-    #             self.setReg(rdDec,Result)
-    #             print("Result:",Result)
-    #             print("getRegisters:",self.getReg(rdDec))
+    
+    # Test 1: ADDI x1, x0, 42
+    print("=== Test 1: ADDI x1, x0, 42 ===")
+    addi_instr = intToBoolList(0x02A00093, 32)  # ADDI x1, x0, 42
+    controls = cpu.executeInstruction(addi_instr)
+    
+    result = boolListToInt(cpu.getReg(1))
+    print(f"x1 = {result} (expected: 42)")
+    print(f"Control signals: regWrite={controls['regWrite']}, aluSrc={controls['aluSrc']}")
+    
+    # Test 2: ADD x2, x1, x1  
+    print("\n=== Test 2: ADD x2, x1, x1 ===")
+    # Manual construction: ADD x2, x1, x1
+    # opcode=0110011 (51), rd=2, funct3=0, rs1=1, rs2=1, funct7=0
+    # Format: [funct7][rs2][rs1][funct3][rd][opcode]
+    #         [0000000][00001][00001][000][00010][0110011]
+    manual_instr = (0 << 25) | (1 << 20) | (1 << 15) | (0 << 12) | (2 << 7) | 0b0110011
+    add_instr = intToBoolList(manual_instr, 32)  # ADD x2, x1, x1
+    print(f"Before ADD: x1={boolListToInt(cpu.getReg(1))}, x2={boolListToInt(cpu.getReg(2))}")
+    controls = cpu.executeInstruction(add_instr)
+    print(f"After ADD: x1={boolListToInt(cpu.getReg(1))}, x2={boolListToInt(cpu.getReg(2))}")
+    
+    result = boolListToInt(cpu.getReg(2))
+    print(f"x2 = {result} (expected: 84)")
+    print(f"Control signals: regWrite={controls['regWrite']}, aluSrc={controls['aluSrc']}")
+    
+    inp = input("enter an instruction if you wish (n for none): ")
+    
 
-            
-    #         #func7 = instruction[25:]
-
-
-    #     #Immediate
-    #     if(opcode==ImmedOpCode):
-    #         pass  # TODO: implement immediate operations
-
-    #     #store
-    #     if(opcode==[True,  True,  False, False, False, True,  False]):
-    #         pass  # TODO: implement store operations
-
-    #     #branch
-    #     if(opcode==[True,  True,  False, False, False, True,  True ]):
-    #         pass  # TODO: implement branch operations
-
-    #     #upper immediate
-    #     if(opcode==[True,True,False,False,False,False,False]):
-    #         pass  # TODO: implement upper immediate operations
-
-    #     #jump
-    #     if(opcode==[True,  True,  True,  True,  False, True,  True ]):
-    #         pass  # TODO: implement jump operations
-
-    def alu(self, a,b,ctrl):
-
-        Result, CarryOut = bitAdd(a,b,False)
-        zeroBits = [False]*32
-        #handling tags
-        Zero = OR(Result, zeroBits)
-        lt = Result[31]
-        LessThan = OR(Result, lt)
-        #just a placeholder for now
-        Overflow = False
-        return Result, Zero, LessThan, Overflow, CarryOut
-
+if __name__ == "__main__":
+    testCompleteControl()
 
 # # #32bit shifter
 def rTypeShift(a, val):
@@ -933,15 +1002,8 @@ def rTypeShift(a, val):
         r=shiftLeft(a, val)
         return r + append
 
-
-
-    
-
 def testCPU32():
 
-    # reg1=[False,False,False,False,False,False,False,False]
-    # reg2=[False,False,False,False,False,False,False,False]
-    # reg3=[False,False,False,False,False,False,False,False]
     add_x3_x1_x2 = [
     # OPCODE = 0110011  (LSB-first: bit0=1, bit1=1, bit2=0, bit3=0, bit4=1, bit5=1, bit6=0)
      True, True, False, False, True, True, False,
@@ -962,170 +1024,16 @@ def testCPU32():
      False, False, False, False, False, False, False
     ]
     print("add_x3_x1_x2[:7]:",add_x3_x1_x2[:7])
-    cpu = cpu_32()
+    cpu = EnhancedCpu32()
     cpu.setReg(4,[False]*2 + [True]*2 + [False]*28)
     cpu.setReg(5,[False]*2 + [True]*2 + [False]*28)
     print('cpu.getReg(0):',cpu.getReg(0))
-    cpu.controlUnit(add_x3_x1_x2)
+    cpu.executeInstruction(add_x3_x1_x2)
 
 
-    print("pos; shift left",bitShifterArthRotate32(add_x3_x1_x2,2))
-    print("neg; shift right",bitShifterArthRotate32(add_x3_x1_x2,-2))
+    print("pos; shift left",shiftLeft(add_x3_x1_x2,2))
+    print("neg; shift right",shiftLeft(add_x3_x1_x2,-2))
 testCPU32()
-
-
-# def bitFPDiv16(a, b):
-
-
-
-
-#     #normalization:
-#     #GRS
-#     #roundup = G & (output[lsb] | R | S) 
-
-
-
-
-
-
-# def bitAND32(a, b):
-
-# def bitOR32(a, b):
-
-# def bitXOR32(a, b):
-
-# def bitNOT32(a):
-
-
-
-
-def testTwoNums():
-    
-
-
-
-
-    # 11-bit value: alternating False/True
-    # multt1 = [False]*3 + [True]*6 + [False]*2 #504
-    # multt2 = [False]*3 + [True]*6 + [False]*2 #504
-    multt1 = [False]*3 + [True]*4 + [False]*4 #8+16+32+64=120
-    multt2 = [False]*5 + [True]*1 + [False]*5 #32
-
-    # 16-bit value: 
-    # Let's pick two random numbers between 0 and 65000 for demonstration
-    # For example: 32745 and 49218
-
-    # Helper to convert integer to 16-bit LSB-first boolean list
-    def int_to_bool_list(n, bits=16):
-        return [(n >> i) & 1 == 1 for i in range(bits)]
-    
-
-    #testing add
-    addie1=91
-    addie2=10
-    addie1_bool = int_to_bool_list(addie1)
-    addie2_bool = int_to_bool_list(addie2)
-
-    memory[16] = addie1_bool
-    rs1reg = addie2_bool
-
-    instr1='11000001010001001000000010000000' #load
-    sliced_instructs1 = slice_instruction(instr1)
-    instr2 = '11001101111100011111111110000000'
-    sliced_instructs2 = slice_instruction(instr2)
-    
-    decoding(sliced_instructs1)
-    decoding(sliced_instructs2)
-    print("rs1reg:", convertToDecimal(rs1reg))
-    print("rdReg",rdReg)
-    print("rdreg:", convertToDecimal(rdReg))
-    print("rs2Reg",rs2Reg)
-
-
-    multt3_val = 325
-
-    multt4_val = 48
-    multt3 = int_to_bool_list(multt3_val)
-    multt4 = int_to_bool_list(multt4_val)
-    print(f"multt3: {multt3}")
-    print(f"multt4: {multt4}")
-    #960*64=61440
-    print(f"multt1 (decimal): {convertToDecimalUnsigned(convert_bool_to_binary(multt1))}")
-    print(f"multt2 (decimal): {convertToDecimalUnsigned(convert_bool_to_binary(multt2))}")
-    #calculate2
-    result_mult = bitMulUnsigned(multt1, multt2)
-    print(f"result_mult: {result_mult}")
-    print(f"Binary product: {convertToDecimalUnsigned(convert_bool_to_binary(result_mult))}")
-    print(f"bool to binary: {convert_bool_to_binary(result_mult)}")
-    print(f"Human readable product: {convertToString(reverseArray(convert_bool_to_binary(result_mult)))}")
-    
-    result_mult2 = bitMul(multt3, multt4)
-    print(f"result_mult2: {result_mult2}")
-    print(f"Binary product: {convertToDecimal(convert_bool_to_binary(result_mult2))}")
-    print(f"bool to binary: {convert_bool_to_binary(result_mult2)}")
-    print(f"Human readable product: {convertToString(reverseArray(convert_bool_to_binary(result_mult2)))}")
-
-    # # fpb represents 
-    # fpb = [
-                           
-        
-    #     # implicit leading-1 + mantissa bits:
-    #     # mantissa (binary): 1.1010000101 
-    #     True, False, True, False, False, False, False, True, False, True,
-    #     # exponent bits [1,0,1,1,1] (here its written in reverse, first element of array is lsb)
-    #     #  → unbiased exponent = 15 − bias=0
-    #     True, True, True, True, False, #exponent, stored as biased
-    #     False # sign bit = 0 → positive
-        
-    # ]
-    # # this value = 1.1010000101 (binary) × 2^0 = 1.6298828125 × 2^0 = 1.6298828125
-    
-    # #'temporarily changing it to be smaller:
-    # #fpc represents...
-    # fpc = [
-    #     # mantissa (binary): 1.1010100000
-        
-        
-        
-    #     # implicit leading-1 + mantissa bits:
-    #     False, False, False, False, False, True, False, True, False, True,
-    #     False, True, False, True, False, ## exponent bits [0,1,0,1,0] → 
-    #     #biased exponent = 10 → unbiased = -5
-    #     False, # sign bit = 0 → positive
-        
-    # ]
-    # # this value = 1.1010100000 (binary) × 2^-5 = 1.65625 × 0.03125 = 0.05175781...
-        
-    # result_fp = bitFPMul16(fpb, fpc)
-    # print(f"result_fp: {result_fp}")
-    # #print(f"Binary product: {convertToFloatingPoint(convert_bool_to_binary(result_fp))}")
-    # print(f"bool to binary: {convert_bool_to_binary(result_fp)}")
-    # print(f"Human readable product: {convertToString(reverseArray(convert_bool_to_binary(result_fp)))}")
-    # print(f"Decimal product: {convertFloatBinaryToDecimal(result_fp)}")
-
-    #32-bit value: alternating False/True
-    subtract1 = [True]*32 #-1
-    subtract2 = [True]*1+[False]*28+[True]*3 #1
-    print(f"subtract1 (decimal): {convertToDecimal(convert_bool_to_binary(subtract1))}")
-    print(f"subtract2 (decimal): {convertToDecimal(convert_bool_to_binary(subtract2))}")
-    #lets try subtracting 
-    subtracted, cout = bitSub(subtract1, subtract2)
-    print("subtracted:", subtracted,"subtracted length:", len(subtracted))
-    print(f"subtraction: {convertToDecimal(convert_bool_to_binary(subtracted))}")
-    num1 = [False, True] * 15 + [False, False] # 32 bits: [F, T, F, T, ..., F, T]
-    # 32-bit value: pattern of two True, two False
-    num2 = ([True, True, False, False] * 8)  # 32 bits: [T, T, F, F, ..., T, T, F, F]
-    #the four horsemen of readibility (decimal and binary)
-    print(f"num1 (decimal): {convertToDecimal(convert_bool_to_binary(num1))}")
-    print(f"num1: {convertToString(reverseArray(convert_bool_to_binary(num1)))}")
-    print(f"num2 (decimal): {convertToDecimal(convert_bool_to_binary(num2))}")
-    print(f"num2: {convertToString(reverseArray(convert_bool_to_binary(num2)))}")
-    #calculate
-    result_sum, carry_out = bitAdd(num1, num2, False)
-    #output
-    print(f"Binary sum: {convertToDecimal(convert_bool_to_binary(result_sum))}, Carry out: {carry_out}")
-    print(f"Human readable sum: {convertToString(reverseArray(convert_bool_to_binary(result_sum)))}")
-    return result_sum
 
 def testTwoEnteredNums():
     test = input("wanna try your own (skip if no, y if yes)")
@@ -1141,5 +1049,6 @@ def testTwoEnteredNums():
 #print(list(reversed(range(len(result_sum)))))
 
 
+#def dynamicTester():
 
 
